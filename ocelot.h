@@ -23,6 +23,7 @@ typedef struct {
 	unsigned int announces;
 	bool visible;
 	bool invalid_ip;
+    bool ipv6;
 	user_ptr user;
 	std::string ip_port;
 	std::string ip;

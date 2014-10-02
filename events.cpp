@@ -18,14 +18,20 @@ connection_mother::connection_mother(worker * worker_obj, config * config_obj, m
 	memset(&address, 0, sizeof(address));
 	addr_len = sizeof(address);
 
-	listen_socket = socket(AF_INET, SOCK_STREAM, 0);
+	listen_socket = socket(AF_INET6, SOCK_STREAM, 0);
 
 	// Stop old sockets from hogging the port
 	int yes = 1;
 	if (setsockopt(listen_socket, SOL_SOCKET, SO_REUSEADDR, &yes, sizeof(int)) == -1) {
 		std::cout << "Could not reuse socket" << std::endl;
 	}
-
+    int i =0;
+    int status = setsockopt(listen_socket, IPPROTO_IPV6, IPV6_V6ONLY,&i, sizeof i);
+    if (status < 0) {
+        fprintf(stderr, "Cannot set options on the socket: %s\n",
+                strerror(errno));
+        abort();
+    }
 	// Create libev event loop
 	ev::io event_loop_watcher;
 
@@ -33,10 +39,14 @@ connection_mother::connection_mother(worker * worker_obj, config * config_obj, m
 	event_loop_watcher.start(listen_socket, ev::READ);
 
 	// Get ready to bind
-	address.sin_family = AF_INET;
+/*	address.sin6_family = AF_INET6;
 	//address.sin_addr.s_addr = inet_addr(conf->host.c_str()); // htonl(INADDR_ANY)
-	address.sin_addr.s_addr = htonl(INADDR_ANY);
-	address.sin_port = htons(conf->port);
+	address.sin6_addr = htonl(INADDR_ANY);
+	address.sin6_port = htons(conf->port);*/
+address.sin6_family = AF_INET6;
+    address.sin6_addr = in6addr_any;
+    address.sin6_port = htons(conf->port);
+
 
 	// Bind
 	if (bind(listen_socket, (sockaddr *) &address, sizeof(address)) == -1) {
@@ -75,7 +85,8 @@ void connection_mother::handle_connect(ev::io &watcher, int events_flags) {
 		std::unique_lock<std::mutex> lock(stats.mutex);
 		stats.opened_connections++;
 		lock.unlock();
-		new connection_middleman(listen_socket, address, addr_len, work, this, conf);
+        addr_size= sizeof(peers);
+		new connection_middleman(listen_socket, peers,addr_size, work, this, conf);
 	}
 }
 
@@ -92,7 +103,7 @@ connection_mother::~connection_mother()
 
 //---------- Connection middlemen - these little guys live until their connection is closed
 
-connection_middleman::connection_middleman(int &listen_socket, sockaddr_in &address, socklen_t &addr_len, worker * new_work, connection_mother * mother_arg, config * config_obj) :
+connection_middleman::connection_middleman(int &listen_socket, sockaddr_storage &address, socklen_t &addr_len, worker * new_work, connection_mother * mother_arg, config * config_obj) :
 	conf(config_obj), mother (mother_arg), work(new_work) {
 
 	connect_sock = accept(listen_socket, (sockaddr *) &address, &addr_len);
@@ -160,12 +171,69 @@ void connection_middleman::handle_read(ev::io &watcher, int events_flags) {
 			shutdown(connect_sock, SHUT_RD);
 			response = error("GET string too long");
 		} else {
-			char ip[INET_ADDRSTRLEN];
-			inet_ntop(AF_INET, &(client_addr.sin_addr), ip, INET_ADDRSTRLEN);
+			char ip[INET6_ADDRSTRLEN];
+            struct sockaddr_in6 *address_v6;
+            address_v6 =((struct sockaddr_in6 *) ((struct sockaddr *)&client_addr));
+			inet_ntop(AF_INET6, &address_v6->sin6_addr, ip, INET6_ADDRSTRLEN);
 			std::string ip_str = ip;
+            std::cout << ip_str << std::endl;
+            bool ipv6= false;
+
+            std::size_t found= ip_str.find('.');
+            if (found!=std::string::npos){
+                std::cout<<"IPV4"<<std::endl;
+                std::size_t f = ip_str.find_last_of(':');
+                std::cout<< f <<std::endl;
+                ip_str =ip_str.substr (++f);
+            }else{
+                ipv6 = true;
+                unsigned int nbdetoken = 7;
+                std::cout<<"IPV6"<<std::endl;
+                std::size_t n = std::count(ip_str.begin(), ip_str.end(), ':');
+                std::size_t nn = ip_str.find(":");
+                std::cout<< "Nb :"<< n << "\n";
+                if (n == 2 && nn == 0) {
+                    std::cout<< "=============\n";
+                    n = 1;
+                }
+
+                std::cout<< n<<(n==2 ? "Egale 2":"Pas egale") <<"\n";
+                if ( n < nbdetoken){
+                    std::string complete = "";
+                    for (int i=0, end= nbdetoken - n+1;i < end;i++){
+                        complete = complete+ "0000:";
+                    }
+                    size_t t = ip_str.find("::");
+                    if ( t!= 0)complete = ":"+complete;
+                    ip_str.replace(t,2,complete);
+                }
+                if (ip_str.length() == 39){
+                    std::cout<<"Good\n";
+                }else{
+                    unsigned int debut = 4;
+                    unsigned int debutsrc = 0;
+                    for (int i=0;i < 7 ; i++){
+                        if (ip_str.find(":",debutsrc) != debut){
+                            std::cout<< "insert 0"<<debutsrc<<"\n";
+                            do{
+                                ip_str.insert(debutsrc,"0");
+                            }while(ip_str.find(":",debutsrc)!= debut);
+                        }
+                        debutsrc +=5;
+                        debut += 5;
+                    }
+                    do{
+                        ip_str.insert(debutsrc,"0");
+                    }while(ip_str.length()<39);
+                }
+                std::cout<<"il y a "<<(nbdetoken- n)<< " : \n";
+            }
+
+
+            std::cout << ip_str << std::endl;
 
 			//--- CALL WORKER
-			response = work->work(request, ip_str);
+			response = work->work(request, ip_str,ipv6);
 		}
 
 		// Find out when the socket is writeable.

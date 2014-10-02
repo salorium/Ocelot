@@ -48,8 +48,10 @@ THE WORKER
 class connection_mother {
 	private:
 		int listen_socket;
-		sockaddr_in address;
+		sockaddr_in6 address;
 		socklen_t addr_len;
+        sockaddr_storage peers;
+        socklen_t addr_size;
 		worker * work;
 		config * conf;
 		mysql * db;
@@ -78,10 +80,10 @@ class connection_middleman {
 		config * conf;
 		connection_mother * mother;
 		worker * work;
-		sockaddr_in client_addr;
+        sockaddr_storage client_addr;
 
 	public:
-		connection_middleman(int &listen_socket, sockaddr_in &address, socklen_t &addr_len, worker* work, connection_mother * mother_arg, config * config_obj);
+		connection_middleman(int &listen_socket, sockaddr_storage &address, socklen_t &addr_len, worker* work, connection_mother * mother_arg, config * config_obj);
 		~connection_middleman();
 
 		void handle_read(ev::io &watcher, int events_flags);

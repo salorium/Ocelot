@@ -42,14 +42,14 @@ bool worker::signal(int sig) {
 		return false;
 	}
 }
-std::string worker::work(std::string &input, std::string &ip) {
+std::string worker::work(std::string &input, std::string &ip, bool ipv6) {
 	unsigned int input_length = input.length();
 
 	//---------- Parse request - ugly but fast. Using substr exploded.
 	if (input_length < 60) { // Way too short to be anything useful
 		return error("GET string too short");
 	}
-
+    std::cout<<ipv6 <<std::endl;
 	size_t pos = 5; // skip 'GET /'
 
 	// Get the passkey
@@ -199,6 +199,7 @@ std::string worker::work(std::string &input, std::string &ip) {
 		// Let's translate the infohash into something nice
 		// info_hash is a url encoded (hex) base 20 number
 		std::string info_hash_decoded = hex_decode(params["info_hash"]);
+        std::cout<<"["<<params["info_hash"]<<"]"<<std::endl;
 		torrent_list::iterator tor = torrents_list.find(info_hash_decoded);
 		if (tor == torrents_list.end()) {
 			std::unique_lock<std::mutex> dr_lock(del_reasons_lock);
@@ -213,13 +214,13 @@ std::string worker::work(std::string &input, std::string &ip) {
 				return error("Unregistered torrent");
 			}
 		}
-		return announce(tor->second, u->second, params, headers, ip);
+		return announce(tor->second, u->second, params, headers, ip,ipv6);
 	} else {
 		return scrape(infohashes, headers);
 	}
 }
 
-std::string worker::announce(torrent &tor, user_ptr &u, params_type &params, params_type &headers, std::string &ip) {
+std::string worker::announce(torrent &tor, user_ptr &u, params_type &params, params_type &headers, std::string &ip, bool ipv6) {
 	cur_time = time(NULL);
 
 	if (params["compact"] != "1") {
@@ -416,29 +417,53 @@ std::string worker::announce(torrent &tor, user_ptr &u, params_type &params, par
 	}
 
 	unsigned int port = strtolong(params["port"]);
-	// Generate compact ip/port string
+
+    // Generate compact ip/port string
 	if (inserted || port != p->port || ip != p->ip) {
-		p->port = port;
+		/*Detection ipv6 address*/
+        p->ipv6 = ipv6;
+        p->port = port;
 		p->ip = ip;
 		p->ip_port = "";
 		char x = 0;
+        std::cout << "IP du client"<< p->ip<<'\n';
 		for (size_t pos = 0, end = ip.length(); pos < end; pos++) {
-			if (ip[pos] == '.') {
-				p->ip_port.push_back(x);
-				x = 0;
-				continue;
-			} else if (!isdigit(ip[pos])) {
-				invalid_ip = true;
-				break;
-			}
-			x = x * 10 + ip[pos] - '0';
+			if ( ipv6){
+                //Compact ipv6 adress
+            if (ip[pos] == ':'){
+                continue;
+            }
+            // x =
+            int y;
+
+            std::string s = "";
+            s.push_back(ip[pos]);
+            s.push_back(ip[pos+1]);
+
+            // std::cout << s << '\n';
+            // std::cout << (ip[pos]+ip[pos+1])<< '\n';
+            std::istringstream iss (s);
+            iss >> std::hex >> y;
+            pos++;
+            // std::cout << y << '\n';
+            // std::cout<<"=>" <<char (y+50)<<'\n';
+                p->ip_port.push_back(y);
+
+            }else {
+                if (ip[pos] == '.') {
+                    p->ip_port.push_back(x);
+                    x = 0;
+                    continue;
+                }
+                x = x * 10 + ip[pos] - '0';
+            }
 		}
-		if (!invalid_ip) {
+		if (!p->ipv6) {
 			p->ip_port.push_back(x);
-			p->ip_port.push_back(port >> 8);
-			p->ip_port.push_back(port & 0xFF);
 		}
-		if (p->ip_port.length() != 6) {
+        p->ip_port.push_back(port >> 8);
+        p->ip_port.push_back(port & 0xFF);
+        if (p->ip_port.length() != 6 && p->ip_port.length() != 18) {
 			p->ip_port.clear();
 			invalid_ip = true;
 		}
@@ -519,6 +544,7 @@ std::string worker::announce(torrent &tor, user_ptr &u, params_type &params, par
 	}
 
 	std::string peers;
+    std::string peers6;
 	if (numwant > 0) {
 		peers.reserve(numwant*6);
 		unsigned int found_peers = 0;
@@ -559,7 +585,11 @@ std::string worker::announce(torrent &tor, user_ptr &u, params_type &params, par
 						++i;
 						continue;
 					}
-					peers.append(i->second.ip_port);
+                    if ( i->second.ipv6){
+                        peers6.append(i->second.ip_port);
+                    }else{
+                        peers.append(i->second.ip_port);
+                    }
 					found_peers++;
 					tor.last_selected_seeder = i->first;
 					++i;
@@ -573,7 +603,11 @@ std::string worker::announce(torrent &tor, user_ptr &u, params_type &params, par
 						continue;
 					}
 					found_peers++;
-					peers.append(i->second.ip_port);
+                    if ( i->second.ipv6){
+                        peers6.append(i->second.ip_port);
+                    }else{
+                        peers.append(i->second.ip_port);
+                    }
 				}
 
 			}
@@ -584,7 +618,11 @@ std::string worker::announce(torrent &tor, user_ptr &u, params_type &params, par
 					continue;
 				}
 				found_peers++;
-				peers.append(i->second.ip_port);
+                if ( i->second.ipv6){
+                    peers6.append(i->second.ip_port);
+                }else{
+                    peers.append(i->second.ip_port);
+                }
 			}
 		}
 	}
@@ -670,6 +708,14 @@ std::string worker::announce(torrent &tor, user_ptr &u, params_type &params, par
 		output += ":";
 		output += peers;
 	}
+    output += "e6:peers6";
+    if (peers6.length() == 0) {
+        output += "0:";
+    } else {
+        output += inttostr(peers6.length());
+        output += ":";
+        output += peers6;
+    }
 	if (invalid_ip) {
 		output += warning("Illegal character found in IP address. IPv6 is not supported");
 	}
