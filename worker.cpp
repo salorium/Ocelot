@@ -424,30 +424,6 @@ std::string worker::announce(torrent &tor, user_ptr &u, params_type &params, par
         p->port = port;
 		p->ip = ip;
 		p->ip_port = "";
-        p->ip6_port = "";
-		if ( !ipv6){
-            //ipv4 donc on la mapped en ip6
-            for ( int i=0; i <10;i++){
-                int y;
-            std::string s = "00";
-            std::istringstream iss (s);
-            iss >> std::hex >> y;
-            // std::cout << y << '\n';
-            // std::cout<<"=>" <<char (y+50)<<'\n';
-            p->ip6_port.push_back(y);
-            }
-            for ( int i=0; i <2;i++){
-                int y;
-                std::string s = "FF";
-                std::istringstream iss (s);
-                iss >> std::hex >> y;
-                // std::cout << y << '\n';
-                // std::cout<<"=>" <<char (y+50)<<'\n';
-                p->ip6_port.push_back(y);
-            }
-
-        }
-
         char x = 0;
         std::cout << "IP du client"<< p->ip<<'\n';
 		for (size_t pos = 0, end = ip.length(); pos < end; pos++) {
@@ -470,12 +446,11 @@ std::string worker::announce(torrent &tor, user_ptr &u, params_type &params, par
             pos++;
             // std::cout << y << '\n';
             // std::cout<<"=>" <<char (y+50)<<'\n';
-                p->ip6_port.push_back(y);
+                p->ip_port.push_back(y);
 
             }else {
                 if (ip[pos] == '.') {
                     p->ip_port.push_back(x);
-                    p->ip6_port.push_back(x);
                     x = 0;
                     continue;
                 }
@@ -484,20 +459,10 @@ std::string worker::announce(torrent &tor, user_ptr &u, params_type &params, par
 		}
 		if (!p->ipv6) {
 			p->ip_port.push_back(x);
-            p->ip6_port.push_back(x);
-            p->ip_port.push_back(port >> 8);
-            p->ip_port.push_back(port & 0xFF);
-            p->ip6_port.push_back(port >> 8);
-            p->ip6_port.push_back(port & 0xFF);
-
         }
-        if ( ipv6){
-
-            p->ip6_port.push_back(port >> 8);
-            p->ip6_port.push_back(port & 0xFF);
-
-        }
-        if (p->ip_port.length() != 6 && p->ip_port.length() != 18) {
+        p->ip_port.push_back(port >> 8);
+        p->ip_port.push_back(port & 0xFF);
+        if (p->ip_port.length() != 6  && p->ip_port.length() != 18) {
 			p->ip_port.clear();
 			invalid_ip = true;
 		}
@@ -579,9 +544,12 @@ std::string worker::announce(torrent &tor, user_ptr &u, params_type &params, par
 
 	std::string peers;
     std::string peers6;
-	if (numwant > 0) {
+    unsigned int found_peers = 0;//Leecher peers ipv4
+    unsigned int found_peers6 = 0;//Leecher peer ipv6
+    unsigned int found_speers = 0; //Seeder peer ipv4
+    unsigned int found_speers6 = 0;//Seeder peer ipv6
+    if (numwant > 0) {
 		peers.reserve(numwant*6);
-		unsigned int found_peers = 0;
 		if (left > 0) { // Show seeders to leechers first
 			if (tor.seeders.size() > 0) {
 				// We do this complicated stuff to cycle through the seeder list, so all seeders will get shown to leechers
@@ -610,7 +578,7 @@ std::string worker::announce(torrent &tor, user_ptr &u, params_type &params, par
 				}
 
 				// Add seeders
-				while (i != end && found_peers < numwant) {
+				while (i != end && found_speers < numwant && found_speers6 < numwant) {
 					if (i == tor.seeders.end()) {
 						i = tor.seeders.begin();
 					}
@@ -619,58 +587,47 @@ std::string worker::announce(torrent &tor, user_ptr &u, params_type &params, par
 						++i;
 						continue;
 					}
-                    if ( ipv6){
-                        //Envoie des peers ipv6 et ipv4 mapped
-                        found_peers++;
-                        peers6.append(i->second.ip6_port);
+                    if ( ! i->second.ipv6){
+                        peers.append(i->second.ip_port);
+                        found_speers++;
                     }else{
-                        //Envoie des peers ipv4 seulement pas de peers ipv6
-                        if ( ! i->second.ipv6){
-                            peers.append(i->second.ip_port);
-                            found_peers++;
-                        }
+                        found_speers6++;
+                        peers6.append(i->second.ip_port);
                     }
                     tor.last_selected_seeder = i->first;
 					++i;
 				}
 			}
 
-			if (found_peers < numwant && tor.leechers.size() > 1) {
-				for (peer_list::const_iterator i = tor.leechers.begin(); i != tor.leechers.end() && found_peers < numwant; ++i) {
+			if (found_speers < numwant && found_speers6 < numwant && tor.leechers.size() > 1) {
+				for (peer_list::const_iterator i = tor.leechers.begin(); i != tor.leechers.end() && (found_peers+found_speers) < numwant && (found_peers6+found_speers6) < numwant; ++i) {
 					// Don't show users themselves or leech disabled users
 					if (i->second.ip_port == p->ip_port || i->second.user->get_id() == userid || !i->second.visible) {
 						continue;
 					}
-                    if ( ipv6){
-                        //Envoie des peers ipv6 et ipv4 mapped
+                    if ( ! i->second.ipv6){
+                        peers.append(i->second.ip_port);
                         found_peers++;
-                        peers6.append(i->second.ip6_port);
                     }else{
-                        //Envoie des peers ipv4 seulement pas de peers ipv6
-                        if ( ! i->second.ipv6){
-                            peers.append(i->second.ip_port);
-                            found_peers++;
-                        }
+                        peers6.append(i->second.ip_port);
+                        found_peers6++;
                     }
+
                 }
 
 			}
 		} else if (tor.leechers.size() > 0) { // User is a seeder, and we have leechers!
-			for (peer_list::const_iterator i = tor.leechers.begin(); i != tor.leechers.end() && found_peers < numwant; ++i) {
+			for (peer_list::const_iterator i = tor.leechers.begin(); i != tor.leechers.end() && found_peers < numwant && found_peers6 < numwant; ++i) {
 				// Don't show users themselves or leech disabled users
 				if (i->second.user->get_id() == userid || !i->second.visible) {
 					continue;
 				}
-                if ( ipv6){
-                    //Envoie des peers ipv6 et ipv4 mapped
+                if ( ! i->second.ipv6){
+                    peers.append(i->second.ip_port);
                     found_peers++;
-                    peers6.append(i->second.ip6_port);
                 }else{
-                    //Envoie des peers ipv4 seulement pas de peers ipv6
-                    if ( ! i->second.ipv6){
-                        peers.append(i->second.ip_port);
-                        found_peers++;
-                    }
+                    peers6.append(i->second.ip_port);
+                    found_peers6++;
                 }
 
             }
@@ -751,15 +708,67 @@ std::string worker::announce(torrent &tor, user_ptr &u, params_type &params, par
 	output += "e12:min intervali";
 	output += inttostr(conf->announce_interval);
     if ( ipv6){
-        output += "e6:peers6";
-        if (peers6.length() == 0) {
-            output += "0:";
-        } else {
-            output += inttostr(peers6.length());
-            output += ":";
-            output += peers6;
+        //Je suis un ipv6
+
+        if (numwant > 0) {
+            //Je demande du boulot
+            if (left > 0) {
+                //Je suis un leecher donc j'ai le choix en ipv4 ou ipv6 je prend celui qui est le plus gros si seeder ipv6 > seeder ipv4 comme ca je laisse les ipv4 pour les ipv4 :)
+                if (found_speers6 > found_speers){
+                    //plus de seeder ipv6 qu' ipv4 donc je prend de l'ipv6
+                    output += "e6:peers6";
+                    if (peers6.length() == 0) {
+                        output += "0:";
+                    } else {
+                        output += inttostr(peers6.length());
+                        output += ":";
+                        output += peers6;
+                    }
+                }else{
+                    output += "e5:peers";
+                    if (peers.length() == 0) {
+                        output += "0:";
+                    } else {
+                        output += inttostr(peers.length());
+                        output += ":";
+                        output += peers;
+                    }
+                }
+            }else{
+               //Je suis un seeder je prend en charge le plus gros paquet de leecher soit ipv6 ou ipv4
+                if ( found_peers < found_peers6){
+                    output += "e5:peers";
+                    if (peers.length() == 0) {
+                        output += "0:";
+                    } else {
+                        output += inttostr(peers.length());
+                        output += ":";
+                        output += peers;
+                    }
+                }else{
+                    output += "e6:peers6";
+                    if (peers6.length() == 0) {
+                        output += "0:";
+                    } else {
+                        output += inttostr(peers6.length());
+                        output += ":";
+                        output += peers6;
+                    }
+                }
+            }
+        }else{
+            output += "e6:peers6";
+            if (peers6.length() == 0) {
+                output += "0:";
+            } else {
+                output += inttostr(peers6.length());
+                output += ":";
+                output += peers6;
+            }
         }
+
     }else{
+        //Je suis un ipv4 alors je recupère que des ipv4 xD
         output += "e5:peers";
         if (peers.length() == 0) {
             output += "0:";
@@ -770,6 +779,9 @@ std::string worker::announce(torrent &tor, user_ptr &u, params_type &params, par
         }
     }
 
+    if (!ipv6){
+        output += warning("Ipv6 prefered");
+    }
 
 	if (invalid_ip) {
 		output += warning("Illegal character found in IP address. IPv6 is not supported");

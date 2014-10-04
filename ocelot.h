@@ -23,11 +23,10 @@ typedef struct {
 	unsigned int announces;
 	bool visible;
 	bool invalid_ip;
-    bool ipv6;    //remake ipv6 => ipv4 for ipv4 adresse disponible par exemple (ipv6 only or ip4 and ipv4 mapped to ipv6)
-	user_ptr user;
-	std::string ip_port;    //seulement ipv4 si possible
-    std::string ip6_port; //ipv6 address or ipv4 mapped adresse :)
-	std::string ip;
+    bool ipv6;
+    user_ptr user;
+	std::string ip_port;
+    std::string ip;
 } peer;
 
 typedef std::map<std::string, peer> peer_list;
