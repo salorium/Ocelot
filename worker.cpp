@@ -417,7 +417,6 @@ std::string worker::announce(torrent &tor, user_ptr &u, params_type &params, par
 	}
 
 	unsigned int port = strtolong(params["port"]);
-
     // Generate compact ip/port string
 	if (inserted || port != p->port || ip != p->ip) {
 		/*Detection ipv6 address*/
@@ -425,7 +424,31 @@ std::string worker::announce(torrent &tor, user_ptr &u, params_type &params, par
         p->port = port;
 		p->ip = ip;
 		p->ip_port = "";
-		char x = 0;
+        p->ip6_port = "";
+		if ( !ipv6){
+            //ipv4 donc on la mapped en ip6
+            for ( int i=0; i <10;i++){
+                int y;
+            std::string s = "00";
+            std::istringstream iss (s);
+            iss >> std::hex >> y;
+            // std::cout << y << '\n';
+            // std::cout<<"=>" <<char (y+50)<<'\n';
+            p->ip6_port.push_back(y);
+            }
+            for ( int i=0; i <2;i++){
+                int y;
+                std::string s = "FF";
+                std::istringstream iss (s);
+                iss >> std::hex >> y;
+                // std::cout << y << '\n';
+                // std::cout<<"=>" <<char (y+50)<<'\n';
+                p->ip6_port.push_back(y);
+            }
+
+        }
+
+        char x = 0;
         std::cout << "IP du client"<< p->ip<<'\n';
 		for (size_t pos = 0, end = ip.length(); pos < end; pos++) {
 			if ( ipv6){
@@ -447,11 +470,12 @@ std::string worker::announce(torrent &tor, user_ptr &u, params_type &params, par
             pos++;
             // std::cout << y << '\n';
             // std::cout<<"=>" <<char (y+50)<<'\n';
-                p->ip_port.push_back(y);
+                p->ip6_port.push_back(y);
 
             }else {
                 if (ip[pos] == '.') {
                     p->ip_port.push_back(x);
+                    p->ip6_port.push_back(x);
                     x = 0;
                     continue;
                 }
@@ -460,9 +484,19 @@ std::string worker::announce(torrent &tor, user_ptr &u, params_type &params, par
 		}
 		if (!p->ipv6) {
 			p->ip_port.push_back(x);
-		}
-        p->ip_port.push_back(port >> 8);
-        p->ip_port.push_back(port & 0xFF);
+            p->ip6_port.push_back(x);
+            p->ip_port.push_back(port >> 8);
+            p->ip_port.push_back(port & 0xFF);
+            p->ip6_port.push_back(port >> 8);
+            p->ip6_port.push_back(port & 0xFF);
+
+        }
+        if ( ipv6){
+
+            p->ip6_port.push_back(port >> 8);
+            p->ip6_port.push_back(port & 0xFF);
+
+        }
         if (p->ip_port.length() != 6 && p->ip_port.length() != 18) {
 			p->ip_port.clear();
 			invalid_ip = true;
@@ -585,13 +619,18 @@ std::string worker::announce(torrent &tor, user_ptr &u, params_type &params, par
 						++i;
 						continue;
 					}
-                    if ( i->second.ipv6){
-                        peers6.append(i->second.ip_port);
+                    if ( ipv6){
+                        //Envoie des peers ipv6 et ipv4 mapped
+                        found_peers++;
+                        peers6.append(i->second.ip6_port);
                     }else{
-                        peers.append(i->second.ip_port);
+                        //Envoie des peers ipv4 seulement pas de peers ipv6
+                        if ( ! i->second.ipv6){
+                            peers.append(i->second.ip_port);
+                            found_peers++;
+                        }
                     }
-					found_peers++;
-					tor.last_selected_seeder = i->first;
+                    tor.last_selected_seeder = i->first;
 					++i;
 				}
 			}
@@ -602,13 +641,18 @@ std::string worker::announce(torrent &tor, user_ptr &u, params_type &params, par
 					if (i->second.ip_port == p->ip_port || i->second.user->get_id() == userid || !i->second.visible) {
 						continue;
 					}
-					found_peers++;
-                    if ( i->second.ipv6){
-                        peers6.append(i->second.ip_port);
+                    if ( ipv6){
+                        //Envoie des peers ipv6 et ipv4 mapped
+                        found_peers++;
+                        peers6.append(i->second.ip6_port);
                     }else{
-                        peers.append(i->second.ip_port);
+                        //Envoie des peers ipv4 seulement pas de peers ipv6
+                        if ( ! i->second.ipv6){
+                            peers.append(i->second.ip_port);
+                            found_peers++;
+                        }
                     }
-				}
+                }
 
 			}
 		} else if (tor.leechers.size() > 0) { // User is a seeder, and we have leechers!
@@ -617,13 +661,19 @@ std::string worker::announce(torrent &tor, user_ptr &u, params_type &params, par
 				if (i->second.user->get_id() == userid || !i->second.visible) {
 					continue;
 				}
-				found_peers++;
-                if ( i->second.ipv6){
-                    peers6.append(i->second.ip_port);
+                if ( ipv6){
+                    //Envoie des peers ipv6 et ipv4 mapped
+                    found_peers++;
+                    peers6.append(i->second.ip6_port);
                 }else{
-                    peers.append(i->second.ip_port);
+                    //Envoie des peers ipv4 seulement pas de peers ipv6
+                    if ( ! i->second.ipv6){
+                        peers.append(i->second.ip_port);
+                        found_peers++;
+                    }
                 }
-			}
+
+            }
 		}
 	}
 
@@ -700,22 +750,27 @@ std::string worker::announce(torrent &tor, user_ptr &u, params_type &params, par
 	output += inttostr(conf->announce_interval+std::min((size_t)600, tor.seeders.size())); // ensure a more even distribution of announces/second
 	output += "e12:min intervali";
 	output += inttostr(conf->announce_interval);
-	output += "e5:peers";
-	if (peers.length() == 0) {
-		output += "0:";
-	} else {
-		output += inttostr(peers.length());
-		output += ":";
-		output += peers;
-	}
-    output += "e6:peers6";
-    if (peers6.length() == 0) {
-        output += "0:";
-    } else {
-        output += inttostr(peers6.length());
-        output += ":";
-        output += peers6;
+    if ( ipv6){
+        output += "e6:peers6";
+        if (peers6.length() == 0) {
+            output += "0:";
+        } else {
+            output += inttostr(peers6.length());
+            output += ":";
+            output += peers6;
+        }
+    }else{
+        output += "e5:peers";
+        if (peers.length() == 0) {
+            output += "0:";
+        } else {
+            output += inttostr(peers.length());
+            output += ":";
+            output += peers;
+        }
     }
+
+
 	if (invalid_ip) {
 		output += warning("Illegal character found in IP address. IPv6 is not supported");
 	}
