@@ -639,22 +639,66 @@ std::string worker::announce(torrent &tor, user_ptr &u, params_type &params, par
 	stats.succ_announcements++;
 	if (dec_l || dec_s || inc_l || inc_s) {
 		std::unique_lock<std::mutex> us_lock(ustats_lock);
-		if (inc_l) {
+        unsigned int as4 = tor.seeders_ipv4;
+        unsigned int as6 = tor.seeders_ipv6;
+        unsigned int al4 = tor.leechers_ipv4;
+        unsigned int al6 = tor.leechers_ipv6;
+        if (inc_l) {
 			p->user->incr_leeching();
 			stats.leechers++;
-		}
+            if (ipv6){
+                tor.leechers_ipv6++;
+                stats.leechersipv6++;
+            }else{
+                tor.leechers_ipv4++;
+                stats.leechersipv4++;
+            }
+        }
 		if (inc_s) {
 			p->user->incr_seeding();
 			stats.seeders++;
+            if (ipv6){
+                tor.seeders_ipv6++;
+                stats.seedersipv6++;
+            }else {
+                tor.seeders_ipv4++;
+                stats.seedersipv4++;
+            }
 		}
 		if (dec_l) {
 			p->user->decr_leeching();
 			stats.leechers--;
+            if (ipv6){
+                tor.leechers_ipv6--;
+                stats.leechersipv6--;
+            }else{
+                tor.leechers_ipv4--;
+                stats.leechersipv4--;
+            }
 		}
 		if (dec_s) {
 			p->user->decr_seeding();
 			stats.seeders--;
+            if (ipv6){
+                tor.seeders_ipv6--;
+                stats.seedersipv6--;
+            }else {
+                tor.seeders_ipv4--;
+                stats.seedersipv4--;
+            }
 		}
+        if (as4 < tor.seeders_ipv4 &&  tor.seeders_ipv4== 1){
+            stats.nbtorrentsseederipv4++;
+        }
+        if (as6 < tor.seeders_ipv6 && tor.seeders_ipv6 == 1){
+            stats.nbtorrentsseederipv6++;
+        }
+        if (as4 > tor.seeders_ipv4 && tor.seeders_ipv4 == 0){
+            stats.nbtorrentsseederipv4--;
+        }
+        if (as6 > tor.seeders_ipv6 && tor.seeders_ipv6 == 0){
+            stats.nbtorrentsseederipv6--;
+        }
 	}
 	lock.unlock();
 
@@ -855,6 +899,9 @@ std::string worker::update(params_type &params) {
 			t->last_selected_seeder = "";
 		} else {
 			t = &i->second;
+            std::unique_lock<std::mutex> stats_lock(stats.mutex);
+            stats.nbtorrents++;
+            stats_lock.unlock();
 		}
 		if (params["freetorrent"] == "0") {
 			t->free_torrent = NORMAL;
@@ -936,7 +983,14 @@ std::string worker::update(params_type &params) {
 			std::unique_lock<std::mutex> stats_lock(stats.mutex);
 			stats.leechers -= torrent_it->second.leechers.size();
 			stats.seeders -= torrent_it->second.seeders.size();
-			stats_lock.unlock();
+            stats.seedersipv4 -= torrent_it->second.seeders_ipv4;
+            stats.seedersipv6 -= torrent_it->second.seeders_ipv6;
+            stats.leechersipv4 -= torrent_it->second.leechers_ipv4;
+            stats.leechersipv6 -= torrent_it->second.leechers_ipv6;
+            stats.nbtorrentsseederipv6 -= (torrent_it->second.seeders_ipv6 >0 ? 1:0);
+            stats.nbtorrentsseederipv4 -= (torrent_it->second.seeders_ipv4 >0 ? 1:0);
+            stats.nbtorrents--;
+            stats_lock.unlock();
 			std::unique_lock<std::mutex> us_lock(ustats_lock);
 			for (auto p = torrent_it->second.leechers.begin(); p != torrent_it->second.leechers.end(); ++p) {
 				p->second.user->decr_leeching();
@@ -1065,7 +1119,7 @@ void worker::do_start_reaper() {
 void worker::reap_peers() {
 	std::cout << "Starting peer reaper" << std::endl;
 	cur_time = time(NULL);
-	unsigned int reaped_l = 0, reaped_s = 0;
+	unsigned int reaped_l = 0, reaped_s = 0,reaped_l4 = 0, reaped_s4 = 0,reaped_l6 = 0, reaped_s6 = 0,reaped_ts4=0,reaped_ts6=0;
 	unsigned int cleared_torrents = 0;
 	for (auto t = torrents_list.begin(); t != torrents_list.end(); ++t) {
 		bool reaped_this = false; // True if at least one peer was deleted from the current torrent
@@ -1078,6 +1132,13 @@ void worker::reap_peers() {
 				del_p->second.user->decr_leeching();
 				us_lock.unlock();
 				std::unique_lock<std::mutex> tl_lock(db->torrent_list_mutex);
+                if (del_p->second.ipv6){
+                    t->second.leechers_ipv6--;
+                    reaped_l6++;
+                }else{
+                    t->second.leechers_ipv4--;
+                    reaped_l4++;
+                }
 				t->second.leechers.erase(del_p);
 				reaped_this = true;
 				reaped_l++;
@@ -1093,6 +1154,13 @@ void worker::reap_peers() {
 				del_p->second.user->decr_seeding();
 				us_lock.unlock();
 				std::unique_lock<std::mutex> tl_lock(db->torrent_list_mutex);
+                if (del_p->second.ipv6){
+                    t->second.seeders_ipv6--;
+                    reaped_s6++;
+                }else{
+                    t->second.seeders_ipv4--;
+                    reaped_s4++;
+                }
 				t->second.seeders.erase(del_p);
 				reaped_this = true;
 				reaped_s++;
@@ -1100,7 +1168,10 @@ void worker::reap_peers() {
 				++p;
 			}
 		}
-		if (reaped_this && t->second.seeders.empty() && t->second.leechers.empty()) {
+        if (t->second.seeders_ipv6 == 0) reaped_ts6++;
+        if (t->second.seeders_ipv4 == 0) reaped_ts4++;
+
+        if (reaped_this && t->second.seeders.empty() && t->second.leechers.empty()) {
 			std::stringstream record;
 			record << '(' << t->second.id << ",0,0,0," << t->second.balance << ')';
 			std::string record_str = record.str();
@@ -1108,10 +1179,16 @@ void worker::reap_peers() {
 			cleared_torrents++;
 		}
 	}
-	if (reaped_l || reaped_s) {
+	if (reaped_l || reaped_s || reaped_ts4 || reaped_ts6|| reaped_l4|| reaped_l6 || reaped_s4|| reaped_s6) {
 		std::unique_lock<std::mutex> lock(stats.mutex);
 		stats.leechers -= reaped_l;
 		stats.seeders -= reaped_s;
+        stats.seedersipv4 -= reaped_s4;
+        stats.seedersipv6 -= reaped_s6;
+        stats.leechersipv4 -= reaped_l4;
+        stats.leechersipv6 -= reaped_l6;
+        stats.nbtorrentsseederipv6 -= reaped_ts6;
+        stats.nbtorrentsleecheripv4 -= reaped_ts4;
 	}
 	std::cout << "Reaped " << reaped_l << " leechers and " << reaped_s << " seeders. Reset " << cleared_torrents << " torrents" << std::endl;
 }

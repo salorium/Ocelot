@@ -73,6 +73,10 @@ void mysql::load_torrents(torrent_list &torrents) {
 			t.balance = 0;
 			t.completed = res[i][3];
 			t.last_selected_seeder = "";
+            t.leechers_ipv4 =0;
+            t.leechers_ipv6 =0;
+            t.seeders_ipv4 = 0;
+            t.seeders_ipv6 = 0;
 			torrents[info_hash] = t;
 		}
 	}

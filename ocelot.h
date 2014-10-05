@@ -41,7 +41,11 @@ typedef struct {
 	time_t last_flushed;
 	peer_list seeders;
 	peer_list leechers;
-	std::string last_selected_seeder;
+    unsigned int  seeders_ipv4;
+    unsigned int  seeders_ipv6;
+    unsigned int  leechers_ipv4;
+    unsigned int  leechers_ipv6;
+    std::string last_selected_seeder;
 	std::set<int> tokened_users;
 } torrent;
 
@@ -87,7 +91,16 @@ struct stats {
 	uint64_t connection_rate;
 	unsigned int leechers;
 	unsigned int seeders;
-	uint64_t announcements;
+    unsigned int seedersipv4;
+    unsigned int seedersipv6;
+    unsigned int leechersipv6;
+    unsigned int leechersipv4;
+    unsigned int nbtorrents;
+    unsigned int nbtorrentsseederipv4;
+    unsigned int nbtorrentsseederipv6;
+    unsigned int nbtorrentsleecheripv4;
+    unsigned int nbtorrentsleecheripv6;
+    uint64_t announcements;
 	uint64_t succ_announcements;
 	uint64_t scrapes;
 	uint64_t bytes_read;

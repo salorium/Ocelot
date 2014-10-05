@@ -32,8 +32,15 @@ std::string report(params_type &params, user_list &users_list) {
 		<< (stats.announcements - stats.succ_announcements) << " failed announcements\n"
 		<< stats.scrapes << " scrapes\n"
 		<< stats.leechers << " leechers tracked\n"
+        << stats.leechersipv4 << " leechers ipv4 tracked\n"
+        << stats.leechersipv6 << " leechers ipv6 tracked\n"
 		<< stats.seeders << " seeders tracked\n"
-		<< stats.bytes_read << " bytes read\n"
+        << stats.seedersipv4 << " seeders ipv4 tracked\n"
+        << stats.seedersipv6 << " seeders ipv6 tracked\n"
+        << stats.nbtorrents << " torrents\n"
+        << stats.nbtorrentsseederipv4 << " torrent with seeders ipv4\n"
+        << stats.nbtorrentsseederipv6 << " torrent with seeders ipv6\n"
+        << stats.bytes_read << " bytes read\n"
 		<< stats.bytes_written << " bytes written\n";
 	} else if (action == "user") {
 		std::string key = params["key"];

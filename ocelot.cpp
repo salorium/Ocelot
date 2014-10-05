@@ -69,7 +69,12 @@ int main(int argc, char **argv) {
 	stats.announcements = 0;
 	stats.succ_announcements = 0;
 	stats.scrapes = 0;
-	stats.bytes_read = 0;
+    stats.leechersipv4 = 0;
+    stats.leechersipv6 = 0;
+    stats.seedersipv4 = 0;
+    stats.seedersipv6 = 0;
+	stats.nbtorrents = torrents_list.size();
+    stats.bytes_read = 0;
 	stats.bytes_written = 0;
 	stats.start_time = time(NULL);
 
