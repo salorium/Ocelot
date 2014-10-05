@@ -1191,7 +1191,7 @@ void worker::reap_peers() {
         stats.leechersipv4 -= reaped_l4;
         stats.leechersipv6 -= reaped_l6;
         stats.nbtorrentsseederipv6 -= reaped_ts6;
-        stats.nbtorrentsleecheripv4 -= reaped_ts4;
+        stats.nbtorrentsseederipv4 -= reaped_ts4;
 	}
 	std::cout << "Reaped " << reaped_l << " leechers and " << reaped_s << " seeders. Reset " << cleared_torrents << " torrents" << std::endl;
 }
