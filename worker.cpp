@@ -714,7 +714,7 @@ std::string worker::announce(torrent &tor, user_ptr &u, params_type &params, par
             //Je demande du boulot
             if (left > 0) {
                 //Je suis un leecher donc j'ai le choix en ipv4 ou ipv6 je prend celui qui est le plus gros si seeder ipv6 > seeder ipv4 comme ca je laisse les ipv4 pour les ipv4 :)
-                if (found_speers6 > found_speers){
+                if (found_speers6 >= found_speers){
                     //plus de seeder ipv6 qu' ipv4 donc je prend de l'ipv6
                     output += "e6:peers6";
                     if (peers6.length() == 0) {
@@ -736,7 +736,7 @@ std::string worker::announce(torrent &tor, user_ptr &u, params_type &params, par
                 }
             }else{
                //Je suis un seeder je prend en charge le plus gros paquet de leecher soit ipv6 ou ipv4
-                if ( found_peers < found_peers6){
+                if ( found_peers >= found_peers6){
                     output += "e5:peers";
                     if (peers.length() == 0) {
                         output += "0:";
@@ -780,7 +780,7 @@ std::string worker::announce(torrent &tor, user_ptr &u, params_type &params, par
     }
 
     if (!ipv6){
-        output += warning("Ipv6 prefered");
+        output += warning("IPv4 is depreceded");
     }
 
 	if (invalid_ip) {
