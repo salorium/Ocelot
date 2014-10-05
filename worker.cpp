@@ -425,7 +425,7 @@ std::string worker::announce(torrent &tor, user_ptr &u, params_type &params, par
 		p->ip = ip;
 		p->ip_port = "";
         char x = 0;
-        std::cout << "IP du client"<< p->ip<<'\n';
+        std::cout << "IP du client"<< p->ip<<std::endl;
 		for (size_t pos = 0, end = ip.length(); pos < end; pos++) {
 			if ( ipv6){
                 //Compact ipv6 adress
@@ -1120,12 +1120,15 @@ void worker::reap_peers() {
 	std::cout << "Starting peer reaper" << std::endl;
 	cur_time = time(NULL);
 	unsigned int reaped_l = 0, reaped_s = 0,reaped_l4 = 0, reaped_s4 = 0,reaped_l6 = 0, reaped_s6 = 0,reaped_ts4=0,reaped_ts6=0;
+    unsigned int ats4,ats6;
 	unsigned int cleared_torrents = 0;
 	for (auto t = torrents_list.begin(); t != torrents_list.end(); ++t) {
 		bool reaped_this = false; // True if at least one peer was deleted from the current torrent
 		auto p = t->second.leechers.begin();
 		peer_list::iterator del_p;
-		while (p != t->second.leechers.end()) {
+        ats4 = t->second.seeders_ipv4;
+        ats6 = t->second.seeders_ipv6;
+        while (p != t->second.leechers.end()) {
 			if (p->second.last_announced + conf->peers_timeout < cur_time) {
 				del_p = p++;
 				std::unique_lock<std::mutex> us_lock(ustats_lock);
@@ -1168,8 +1171,8 @@ void worker::reap_peers() {
 				++p;
 			}
 		}
-        if (t->second.seeders_ipv6 == 0) reaped_ts6++;
-        if (t->second.seeders_ipv4 == 0) reaped_ts4++;
+        if (ats6 > t->second.seeders_ipv6 && t->second.seeders_ipv6 == 0) reaped_ts6++;
+        if (ats4 > t->second.seeders_ipv4 && t->second.seeders_ipv4 == 0) reaped_ts4++;
 
         if (reaped_this && t->second.seeders.empty() && t->second.leechers.empty()) {
 			std::stringstream record;
