@@ -40,6 +40,8 @@ std::string report(params_type &params, user_list &users_list) {
         << stats.nbtorrents << " torrents\n"
         << stats.nbtorrentsseederipv4 << " torrent with seeders ipv4\n"
         << stats.nbtorrentsseederipv6 << " torrent with seeders ipv6\n"
+        << (stats.nbtorrentsseederipv6 / stats.nbtorrents *100 )<< " % torrent with seeders ipv6\n"
+        << (stats.nbtorrentsseederipv4 / stats.nbtorrents *100 )<< " % torrent with seeders ipv4\n"
         << stats.bytes_read << " bytes read\n"
 		<< stats.bytes_written << " bytes written\n";
 	} else if (action == "user") {
