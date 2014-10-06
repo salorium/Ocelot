@@ -779,8 +779,8 @@ std::string worker::announce(torrent &tor, user_ptr &u, params_type &params, par
                     }
                 }
             }else{
-               //Je suis un seeder je prend en charge le plus gros paquet de leecher soit ipv6 ou ipv4
-                if ( found_peers >= found_peers6){
+               //Je suis un seeder
+                if ( tor.seeders_ipv4 == 0 && tor.leechers_ipv4 > 0){//Si il y a un leecher ipv4 et pas de seeder ipv4 alors je prend en charge ce leecher ipv4
                     output += "e5:peers";
                     if (peers.length() == 0) {
                         output += "0:";
@@ -790,15 +790,28 @@ std::string worker::announce(torrent &tor, user_ptr &u, params_type &params, par
                         output += peers;
                     }
                 }else{
-                    output += "e6:peers6";
-                    if (peers6.length() == 0) {
-                        output += "0:";
-                    } else {
-                        output += inttostr(peers6.length());
-                        output += ":";
-                        output += peers6;
+                    //je prend en charge le plus gros paquet de leecher soit ipv6 ou ipv4
+                    if ( found_peers >= found_peers6){
+                        output += "e5:peers";
+                        if (peers.length() == 0) {
+                            output += "0:";
+                        } else {
+                            output += inttostr(peers.length());
+                            output += ":";
+                            output += peers;
+                        }
+                    }else{
+                        output += "e6:peers6";
+                        if (peers6.length() == 0) {
+                            output += "0:";
+                        } else {
+                            output += inttostr(peers6.length());
+                            output += ":";
+                            output += peers6;
+                        }
                     }
                 }
+
             }
         }else{
             output += "e6:peers6";
@@ -1120,10 +1133,10 @@ void worker::reap_peers() {
 	std::cout << "Starting peer reaper" << std::endl;
 	cur_time = time(NULL);
 	unsigned int reaped_l = 0, reaped_s = 0,reaped_l4 = 0, reaped_s4 = 0,reaped_l6 = 0, reaped_s6 = 0,reaped_ts4=0,reaped_ts6=0;
-    unsigned int ats4,ats6;
-	unsigned int cleared_torrents = 0;
+    unsigned int cleared_torrents = 0;
 	for (auto t = torrents_list.begin(); t != torrents_list.end(); ++t) {
-		bool reaped_this = false; // True if at least one peer was deleted from the current torrent
+        unsigned int ats4,ats6;
+        bool reaped_this = false; // True if at least one peer was deleted from the current torrent
 		auto p = t->second.leechers.begin();
 		peer_list::iterator del_p;
         ats4 = t->second.seeders_ipv4;
