@@ -19,6 +19,7 @@ typedef struct {
 	int64_t corrupt;
 	int64_t left;
 	time_t last_announced;
+    time_t last_seedtime_announced;
 	time_t first_announced;
 	unsigned int announces;
 	bool visible;
