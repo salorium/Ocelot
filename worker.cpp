@@ -909,12 +909,16 @@ std::string worker::update(params_type &params) {
 			t->id = strtolong(params["id"]);
 			t->balance = 0;
 			t->completed = 0;
+            t->leechers_ipv4 = 0;
+            t->seeders_ipv4 = 0;
+            t->seeders_ipv6 = 0;
+            t->leechers_ipv6 = 0;
 			t->last_selected_seeder = "";
-		} else {
-			t = &i->second;
             std::unique_lock<std::mutex> stats_lock(stats.mutex);
             stats.nbtorrents++;
             stats_lock.unlock();
+		} else {
+			t = &i->second;
 		}
 		if (params["freetorrent"] == "0") {
 			t->free_torrent = NORMAL;
