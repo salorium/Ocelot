@@ -144,7 +144,7 @@ void mysql::record_user(std::string &record,std::string &ulogin) {
 	}
     mysqlpp::Query q = conn.query();
     q <<  '(' << mysqlpp::quote << ulogin << ','<< record ;
-	update_user_buffer += record;
+	update_user_buffer +=  q.str();
 }
 
 void mysql::record_torrent(std::string &record) {
