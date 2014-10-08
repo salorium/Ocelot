@@ -23,7 +23,7 @@ bool site_comm::all_clear() {
 	return (token_queue.size() == 0);
 }
 
-void site_comm::expire_token(int torrent, int user)
+void site_comm::expire_token(int torrent, std::string user)
 {
 	std::stringstream token_pair;
 	token_pair << user << ':' << torrent;

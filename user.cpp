@@ -1,12 +1,13 @@
 #include "user.h"
+#include <string>
 
-user::user(int uid, bool leech, bool protect) : id(uid), leechstatus(leech), protect_ip(protect) {
+user::user(std::string ulogin, bool leech, bool protect, unsigned int ukarmatmp) : login(ulogin), leechstatus(leech), protect_ip(protect), karmatmp(ukarmatmp) {
 	stats.leeching = 0;
 	stats.seeding = 0;
 }
 
-int user::get_id() {
-	return id;
+std::string user::get_login() {
+	return login;
 }
 
 bool user::is_protected() {

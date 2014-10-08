@@ -273,7 +273,7 @@ std::string worker::announce(torrent &tor, user_ptr &u, params_type &params, par
 		update_torrent = true;
 		active = 0;
 	}
-	int userid = u->get_id();
+    std::string ulogin = u->get_login();
 	peer * p;
 	peer_list::iterator peer_it;
 	// Insert/find the peer in the torrent list
@@ -331,6 +331,11 @@ std::string worker::announce(torrent &tor, user_ptr &u, params_type &params, par
 			// If this was an existing peer, the user pointer will be corrected later
 			p->user = u;
 		}
+        if (left == 0){
+            p->last_seedtime_announced = cur_time;
+        }else{
+            p->last_seedtime_announced = 0;
+        }
 		p->first_announced = cur_time;
 		p->last_announced = 0;
 		p->uploaded = uploaded;
@@ -374,7 +379,7 @@ std::string worker::announce(torrent &tor, user_ptr &u, params_type &params, par
 				upspeed = uploaded_change / (cur_time - p->last_announced);
 				downspeed = downloaded_change / (cur_time - p->last_announced);
 			}
-			std::set<int>::iterator sit = tor.tokened_users.find(userid);
+			std::set<std::string>::iterator sit = tor.tokened_users.find(ulogin);
 			if (tor.free_torrent == NEUTRAL) {
 				downloaded_change = 0;
 				uploaded_change = 0;
@@ -382,7 +387,7 @@ std::string worker::announce(torrent &tor, user_ptr &u, params_type &params, par
 				if (sit != tor.tokened_users.end()) {
 					expire_token = true;
 					std::stringstream record;
-					record << '(' << userid << ',' << tor.id << ',' << downloaded_change << ')';
+					record << '(' << ulogin << ',' << tor.id << ',' << downloaded_change << ')';
 					std::string record_str = record.str();
 					db->record_token(record_str);
 				}
@@ -390,10 +395,13 @@ std::string worker::announce(torrent &tor, user_ptr &u, params_type &params, par
 			}
 
 			if (uploaded_change || downloaded_change) {
-				std::stringstream record;
-				record << '(' << userid << ',' << uploaded_change << ',' << downloaded_change << ')';
+                /**
+                * Todo : utilisateur_torrent ajoute ce que l'on a dl et ou uploader :)
+                */
+                std::stringstream record;
+				record  << uploaded_change << ',' << downloaded_change << ','<<0 <<','<< u->karmatmp<< ')';
 				std::string record_str = record.str();
-				db->record_user(record_str);
+				db->record_user(record_str,ulogin);
 			}
 		}
 	}
@@ -478,7 +486,7 @@ std::string worker::announce(torrent &tor, user_ptr &u, params_type &params, par
 	// Add peer data to the database
 	std::stringstream record;
 	if (peer_changed) {
-		record << '(' << userid << ',' << tor.id << ',' << active << ',' << uploaded << ',' << downloaded << ',' << upspeed << ',' << downspeed << ',' << left << ',' << corrupt << ',' << (cur_time - p->first_announced) << ',' << p->announces << ',';
+		record << '(' << ulogin << ',' << tor.id << ',' << active << ',' << uploaded << ',' << downloaded << ',' << upspeed << ',' << downspeed << ',' << left << ',' << corrupt << ',' << (cur_time - p->first_announced) << ',' << p->announces << ',';
 		std::string record_str = record.str();
 		std::string record_ip;
 		if (u->is_protected()) {
@@ -492,7 +500,27 @@ std::string worker::announce(torrent &tor, user_ptr &u, params_type &params, par
 		std::string record_str = record.str();
 		db->record_peer(record_str, peer_id);
 	}
-
+    if ( p->last_seedtime_announced > 0 && p->last_seedtime_announced != cur_time){
+        time_t seedtime = cur_time - p->last_seedtime_announced;
+        /**
+        * Todo ajouter le seedtime dans la table utilisateur_torrent
+        */
+        /**
+        * Karma
+        */
+        std::unique_lock<std::mutex> stats_lock(u->mutex);
+        u->karmatmp += ((tor.seeders.size() <= 3 ? 2:1)*seedtime);
+        unsigned karma = u->karmatmp / 3600;
+        u->karmatmp = u->karmatmp % 3600;
+        stats_lock.unlock();
+        std::stringstream record;
+        record  << 0 << ',' << 0 << ','<<karma <<','<< u->karmatmp<< ')';
+        std::string record_str = record.str();
+        db->record_user(record_str,ulogin);
+    }
+    if ( left == 0){
+        p->last_seedtime_announced = cur_time;
+    }
 	// Select peers!
 	unsigned int numwant;
 	params_type::const_iterator param_numwant = params.find("numwant");
@@ -521,7 +549,7 @@ std::string worker::announce(torrent &tor, user_ptr &u, params_type &params, par
 		} else {
 			record_ip = ip;
 		}
-		record << '(' << userid << ',' << tor.id << ',' << cur_time;
+		record << '(' << ulogin << ',' << tor.id << ',' << cur_time;
 		std::string record_str = record.str();
 		db->record_snatch(record_str, record_ip);
 
@@ -535,8 +563,8 @@ std::string worker::announce(torrent &tor, user_ptr &u, params_type &params, par
 			dec_l = inc_s = true;
 		}
 		if (expire_token) {
-			s_comm->expire_token(tor.id, userid);
-			tor.tokened_users.erase(userid);
+			s_comm->expire_token(tor.id, ulogin);
+			tor.tokened_users.erase(ulogin);
 		}
 	} else if (!u->can_leech() && left > 0) {
 		numwant = 0;
@@ -583,7 +611,7 @@ std::string worker::announce(torrent &tor, user_ptr &u, params_type &params, par
 						i = tor.seeders.begin();
 					}
 					// Don't show users themselves
-					if (i->second.user->get_id() == userid || !i->second.visible) {
+					if (i->second.user->get_login() == ulogin || !i->second.visible) {
 						++i;
 						continue;
 					}
@@ -602,7 +630,7 @@ std::string worker::announce(torrent &tor, user_ptr &u, params_type &params, par
 			if (found_speers < numwant && found_speers6 < numwant && tor.leechers.size() > 1) {
 				for (peer_list::const_iterator i = tor.leechers.begin(); i != tor.leechers.end() && (found_peers+found_speers) < numwant && (found_peers6+found_speers6) < numwant; ++i) {
 					// Don't show users themselves or leech disabled users
-					if (i->second.ip_port == p->ip_port || i->second.user->get_id() == userid || !i->second.visible) {
+					if (i->second.ip_port == p->ip_port || i->second.user->get_login() == ulogin || !i->second.visible) {
 						continue;
 					}
                     if ( ! i->second.ipv6){
@@ -619,7 +647,7 @@ std::string worker::announce(torrent &tor, user_ptr &u, params_type &params, par
 		} else if (tor.leechers.size() > 0) { // User is a seeder, and we have leechers!
 			for (peer_list::const_iterator i = tor.leechers.begin(); i != tor.leechers.end() && found_peers < numwant && found_peers6 < numwant; ++i) {
 				// Don't show users themselves or leech disabled users
-				if (i->second.user->get_id() == userid || !i->second.visible) {
+				if (i->second.user->get_login() == ulogin || !i->second.visible) {
 					continue;
 				}
                 if ( ! i->second.ipv6){
@@ -897,7 +925,7 @@ std::string worker::update(params_type &params) {
 		} else {
 			users_list[newpasskey] = u->second;
 			users_list.erase(oldpasskey);
-			std::cout << "Changed passkey from " << oldpasskey << " to " << newpasskey << " for user " << u->second->get_id() << std::endl;
+			std::cout << "Changed passkey from " << oldpasskey << " to " << newpasskey << " for user " << u->second->get_login() << std::endl;
 		}
 	} else if (params["action"] == "add_torrent") {
 		torrent *t;
@@ -970,21 +998,21 @@ std::string worker::update(params_type &params) {
 		}
 	} else if (params["action"] == "add_token") {
 		std::string info_hash = hex_decode(params["info_hash"]);
-		int userid = atoi(params["userid"].c_str());
+        std::string ulogin = params["login"];
 		auto torrent_it = torrents_list.find(info_hash);
 		if (torrent_it != torrents_list.end()) {
-			torrent_it->second.tokened_users.insert(userid);
+			torrent_it->second.tokened_users.insert(ulogin);
 		} else {
-			std::cout << "Failed to find torrent to add a token for user " << userid << std::endl;
+			std::cout << "Failed to find torrent to add a token for user " << ulogin << std::endl;
 		}
 	} else if (params["action"] == "remove_token") {
 		std::string info_hash = hex_decode(params["info_hash"]);
-		int userid = atoi(params["userid"].c_str());
+        std::string ulogin = params["login"];
 		auto torrent_it = torrents_list.find(info_hash);
 		if (torrent_it != torrents_list.end()) {
-			torrent_it->second.tokened_users.erase(userid);
+			torrent_it->second.tokened_users.erase(ulogin);
 		} else {
-			std::cout << "Failed to find torrent " << info_hash << " to remove token for user " << userid << std::endl;
+			std::cout << "Failed to find torrent " << info_hash << " to remove token for user " << ulogin << std::endl;
 		}
 	} else if (params["action"] == "delete_torrent") {
 		std::string info_hash = params["info_hash"];
@@ -1027,21 +1055,21 @@ std::string worker::update(params_type &params) {
 		}
 	} else if (params["action"] == "add_user") {
 		std::string passkey = params["passkey"];
-		unsigned int userid = strtolong(params["id"]);
+        std::string ulogin = params["login"];
 		auto u = users_list.find(passkey);
 		if (u == users_list.end()) {
 			bool protect_ip = params["visible"] == "0";
-			user_ptr u(new user(userid, true, protect_ip));
+			user_ptr u(new user(ulogin, true, protect_ip,0));
 			users_list.insert(std::pair<std::string, user_ptr>(passkey, u));
-			std::cout << "Added user " << passkey << " with id " << userid << std::endl;
+			std::cout << "Added user " << passkey << " with id " << ulogin << std::endl;
 		} else {
-			std::cout << "Tried to add already known user " << passkey << " with id " << userid << std::endl;
+			std::cout << "Tried to add already known user " << passkey << " with id " << ulogin << std::endl;
 		}
 	} else if (params["action"] == "remove_user") {
 		std::string passkey = params["passkey"];
 		auto u = users_list.find(passkey);
 		if (u != users_list.end()) {
-			std::cout << "Removed user " << passkey << " with id " << u->second->get_id() << std::endl;
+			std::cout << "Removed user " << passkey << " with id " << u->second->get_login() << std::endl;
 			users_list.erase(u);
 		}
 	} else if (params["action"] == "remove_users") {

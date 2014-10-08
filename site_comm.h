@@ -24,7 +24,7 @@ class site_comm {
 		bool verbose_flush;
 		site_comm(config &conf);
 		bool all_clear();
-		void expire_token(int torrent, int user);
+		void expire_token(int torrent, std::string user);
 		void flush_tokens();
 		void do_flush_tokens();
 		~site_comm();

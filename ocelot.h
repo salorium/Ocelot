@@ -47,7 +47,7 @@ typedef struct {
     unsigned int  leechers_ipv4;
     unsigned int  leechers_ipv6;
     std::string last_selected_seeder;
-	std::set<int> tokened_users;
+	std::set<std::string> tokened_users;
 } torrent;
 
 enum {

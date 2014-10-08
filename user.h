@@ -1,6 +1,8 @@
+#include <string>
+#include <mutex>
 class user {
 	private:
-		int id;
+		std::string login;
 		bool leechstatus;
 		bool protect_ip;
 		struct {
@@ -8,8 +10,10 @@ class user {
 			unsigned int seeding;
 		} stats;
 	public:
-		user(int uid, bool leech, bool protect);
-		int get_id();
+        unsigned karmatmp;
+        std::mutex mutex;
+		user(std::string ulogin, bool leech, bool protect, unsigned int ukarmatmp);
+		std::string get_login();
 		bool is_protected();
 		void set_protected(bool status);
 		bool can_leech();

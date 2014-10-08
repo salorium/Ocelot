@@ -83,31 +83,38 @@ void mysql::load_torrents(torrent_list &torrents) {
 }
 
 void mysql::load_users(user_list &users) {
-	mysqlpp::Query query = conn.query("SELECT ID, can_leech, torrent_pass, visible FROM users_main WHERE Enabled='1';");
+	mysqlpp::Query query = conn.query("SELECT login, canleech, torrentpass, visible,karmatmp FROM utilisateur WHERE enabled='1';");
 	if (mysqlpp::StoreQueryResult res = query.store()) {
 		size_t num_rows = res.num_rows();
 		for (size_t i = 0; i < num_rows; i++) {
 			std::string passkey;
 			res[i][2].to_string(passkey);
 			bool protect_ip = res[i][3].compare("1") != 0;
-
-			user_ptr u(new user(res[i][0], res[i][1], protect_ip));
+            std::string login;
+            res[i][0].to_string(login);
+			user_ptr u(new user(login, res[i][1], protect_ip,res[i][4]));
 			users.insert(std::pair<std::string, user_ptr>(passkey, u));
 		}
 	}
 }
 
+/**
+* Todo : a reformater
+*/
+
 void mysql::load_tokens(torrent_list &torrents) {
-	mysqlpp::Query query = conn.query("SELECT uf.UserID, t.info_hash FROM users_freeleeches AS uf JOIN torrents AS t ON t.ID = uf.TorrentID WHERE uf.Expired = '0';");
+	mysqlpp::Query query = conn.query("SELECT uf.login, t.info_hash FROM users_freeleeches AS uf JOIN torrents AS t ON t.ID = uf.TorrentID WHERE uf.Expired = '0';");
 	if (mysqlpp::StoreQueryResult res = query.store()) {
 		size_t num_rows = res.num_rows();
 		for (size_t i = 0; i < num_rows; i++) {
 			std::string info_hash;
 			res[i][1].to_string(info_hash);
+            std::string login;
+            res[i][0].to_string(login);
 			torrent_list::iterator it = torrents.find(info_hash);
 			if (it != torrents.end()) {
 				torrent &tor = it->second;
-				tor.tokened_users.insert(res[i][0]);
+				tor.tokened_users.insert(login);
 			}
 		}
 	}
@@ -131,10 +138,12 @@ void mysql::record_token(std::string &record) {
 	update_token_buffer += record;
 }
 
-void mysql::record_user(std::string &record) {
+void mysql::record_user(std::string &record,std::string &ulogin) {
 	if (update_user_buffer != "") {
 		update_user_buffer += ",";
 	}
+    mysqlpp::Query q = conn.query();
+    q <<  '(' << mysqlpp::quote << ulogin << ','<< record ;
 	update_user_buffer += record;
 }
 
@@ -196,8 +205,8 @@ void mysql::flush_users() {
 	if (update_user_buffer == "") {
 		return;
 	}
-	sql = "INSERT INTO users_main (ID, Uploaded, Downloaded) VALUES " + update_user_buffer +
-		" ON DUPLICATE KEY UPDATE Uploaded = Uploaded + VALUES(Uploaded), Downloaded = Downloaded + VALUES(Downloaded)";
+	sql = "INSERT INTO utilisateur (login, uploaded, downloaded,karma,karmatmp) VALUES " + update_user_buffer +
+		" ON DUPLICATE KEY UPDATE uploaded = uploaded + VALUES(uploaded), downloaded = downloaded + VALUES(downloaded), karma = karma + VALUES(karma), karmatmp = values(karmatmp)";
 	user_queue.push(sql);
 	update_user_buffer.clear();
 	if (u_active == false) {
@@ -217,10 +226,10 @@ void mysql::flush_torrents() {
 	if (update_torrent_buffer == "") {
 		return;
 	}
-	sql = "INSERT INTO torrents (ID,Seeders,Leechers,Snatched,Balance) VALUES " + update_torrent_buffer +
-		" ON DUPLICATE KEY UPDATE Seeders=VALUES(Seeders), Leechers=VALUES(Leechers), " +
-		"Snatched=Snatched+VALUES(Snatched), Balance=VALUES(Balance), last_action = " +
-		"IF(VALUES(Seeders) > 0, NOW(), last_action)";
+	sql = "INSERT INTO torrents (id,seeders,leechers,snatched,balance) VALUES " + update_torrent_buffer +
+		" ON DUPLICATE KEY UPDATE seeders=VALUES(seeders), leechers=VALUES(leechers), " +
+		"snatched=snatched+VALUES(snatched), balance=VALUES(balance), last_action = " +
+		"IF(VALUES(seeders) > 0, NOW(), last_action)";
 	torrent_queue.push(sql);
 	update_torrent_buffer.clear();
 	sql.clear();

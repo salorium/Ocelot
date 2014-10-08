@@ -58,7 +58,7 @@ class mysql {
 		void load_tokens(torrent_list &torrents);
 		void load_whitelist(std::vector<std::string> &whitelist);
 
-		void record_user(std::string &record); // (id,uploaded_change,downloaded_change)
+		void record_user(std::string &record,std::string &ulogin); // (id,uploaded_change,downloaded_change)
 		void record_torrent(std::string &record); // (id,seeders,leechers,snatched_change,balance)
 		void record_snatch(std::string &record, std::string &ip); // (uid,fid,tstamp)
 		void record_peer(std::string &record, std::string &ip, std::string &peer_id, std::string &useragent); // (uid,fid,active,peerid,useragent,ip,uploaded,downloaded,upspeed,downspeed,left,timespent,announces,tstamp)
