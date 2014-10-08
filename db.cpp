@@ -193,6 +193,7 @@ void mysql::record_user_torrentst(std::string &record, std::string &ulogin){
     q << '(' << mysqlpp::quote << ulogin << ',' << record <<  ')';
 
     update_user_torrentst_buffer += q.str();
+    std::cout<< update_user_torrentst_buffer <<std::endl;
 }
 void mysql::record_user_torrentist(std::string &record, std::string &ulogin){
     if (update_user_torrentist_buffer != "") {
