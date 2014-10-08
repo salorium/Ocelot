@@ -525,7 +525,7 @@ std::string worker::announce(torrent &tor, user_ptr &u, params_type &params, par
         record  << 0 << ',' << 0 << ','<<karma <<','<< u->karmatmp<< ')';
         std::string record_str = record.str();
         db->record_user(record_str,ulogin);
-        record.clear();
+        record.str("");
         record_str.clear();
             record  << tor.id << ',' << seedtime;
             record_str = record.str();

@@ -254,7 +254,7 @@ void mysql::flush_user_torrent() {
     }
     if ( update_user_torrentist_buffer !=""){
         sql = "INSERT INTO utilisateur_torrent (login, idtorrent,time) VALUES " + update_user_torrentist_buffer +
-                " ON DUPLICATE KEY UPDATE time =  VALUES(time)";
+                " ON DUPLICATE KEY UPDATE time =  VALUES(time) where time = '0'";
         user_torrent_queue.push(sql);
         update_user_torrentist_buffer.clear();
         sql.clear();
