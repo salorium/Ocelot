@@ -155,12 +155,12 @@ void mysql::record_torrent(std::string &record) {
 	update_torrent_buffer += record;
 }
 
-void mysql::record_peer(std::string &record, std::string &ip, std::string &peer_id, std::string &useragent) {
+void mysql::record_peer(std::string &record, std::string &ip, std::string &peer_id, std::string &useragent,std::string &ulogin) {
 	if (update_heavy_peer_buffer != "") {
 		update_heavy_peer_buffer += ",";
 	}
 	mysqlpp::Query q = conn.query();
-	q << record << mysqlpp::quote << ip << ',' << mysqlpp::quote << peer_id << ',' << mysqlpp::quote << useragent << "," << time(NULL) << ')';
+	q << '(' << mysqlpp::quote << ulogin << ',' << record << mysqlpp::quote << ip << ',' << mysqlpp::quote << peer_id << ',' << mysqlpp::quote << useragent << "," << time(NULL) << ')';
 
 	update_heavy_peer_buffer += q.str();
 }

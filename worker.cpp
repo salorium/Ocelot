@@ -486,7 +486,7 @@ std::string worker::announce(torrent &tor, user_ptr &u, params_type &params, par
 	// Add peer data to the database
 	std::stringstream record;
 	if (peer_changed) {
-		record << '(' << ulogin << ',' << tor.id << ',' << active << ',' << uploaded << ',' << downloaded << ',' << upspeed << ',' << downspeed << ',' << left << ',' << corrupt << ',' << (cur_time - p->first_announced) << ',' << p->announces << ',';
+		record <<  tor.id << ',' << active << ',' << uploaded << ',' << downloaded << ',' << upspeed << ',' << downspeed << ',' << left << ',' << corrupt << ',' << (cur_time - p->first_announced) << ',' << p->announces << ',';
 		std::string record_str = record.str();
 		std::string record_ip;
 		if (u->is_protected()) {
@@ -494,7 +494,7 @@ std::string worker::announce(torrent &tor, user_ptr &u, params_type &params, par
 		} else {
 			record_ip = ip;
 		}
-		db->record_peer(record_str, record_ip, peer_id, headers["user-agent"]);
+		db->record_peer(record_str, record_ip, peer_id, headers["user-agent"],ulogin);
 	} else {
 		record << '(' << tor.id << ',' << (cur_time - p->first_announced) << ',' << p->announces << ',';
 		std::string record_str = record.str();
