@@ -196,13 +196,15 @@ void mysql::record_user_torrentst(std::string &record, std::string &ulogin){
     std::cout<< update_user_torrentst_buffer <<std::endl;
 }
 void mysql::record_user_torrentist(std::string &record, std::string &ulogin){
-    if (update_user_torrentist_buffer != "") {
+    /*if (update_user_torrentist_buffer != "") {
         update_user_torrentist_buffer += ",";
-    }
+    }*/
+    std::unique_lock<std::mutex> uq_lock(user_torrent_queue_lock);
     mysqlpp::Query q = conn.query();
-    q << '(' << mysqlpp::quote << ulogin << ',' << record << ',' << time(NULL) << ')';
-
-    update_user_torrentist_buffer += q.str();
+    q << "update utilisateur_torrent set time ="<< time(NULL) <<" where login =" << mysqlpp::quote << ulogin << " and idtorrent=" << record << " and time = 0";
+    user_torrent_queue.push(q.str());
+    uq_lock.unlock();
+    //update_user_torrentist_buffer += q.str();
 }
 
 void mysql::record_snatch(std::string &record, std::string &ip) {
@@ -252,13 +254,13 @@ void mysql::flush_user_torrent() {
         update_user_torrentst_buffer.clear();
         sql.clear();
     }
-    if ( update_user_torrentist_buffer !=""){
-        sql = "INSERT INTO utilisateur_torrent (login, idtorrent,time) VALUES " + update_user_torrentist_buffer +
-                " ON DUPLICATE KEY UPDATE time =  VALUES(time) where time = '0'";
+    /*if ( update_user_torrentist_buffer !=""){
+        sql = "update utilisateur_torrent (login, idtorrent,time) VALUES " + update_user_torrentist_buffer +
+                " ON DUPLICATE KEY UPDATE time =  VALUES(time)";
         user_torrent_queue.push(sql);
         update_user_torrentist_buffer.clear();
         sql.clear();
-    }
+    }*/
     if (ut_active == false) {
         std::thread thread(&mysql::do_flush_user_torrent, this);
         thread.detach();
