@@ -16,15 +16,19 @@ class mysql {
 		std::string update_light_peer_buffer;
 		std::string update_snatch_buffer;
 		std::string update_token_buffer;
+        std::string update_user_torrentud_buffer;
+        std::string update_user_torrentst_buffer;
+        std::string update_user_torrentist_buffer;
 
-		std::queue<std::string> user_queue;
+        std::queue<std::string> user_queue;
 		std::queue<std::string> torrent_queue;
 		std::queue<std::string> peer_queue;
 		std::queue<std::string> snatch_queue;
 		std::queue<std::string> token_queue;
+        std::queue<std::string> user_torrent_queue;
 
 		std::string db, server, db_user, pw;
-		bool u_active, t_active, p_active, s_active, tok_active;
+		bool u_active, t_active, p_active, s_active, tok_active, ut_active;
 
 		// These locks prevent more than one thread from reading/writing the buffers.
 		// These should be held for the minimum time possible.
@@ -34,18 +38,21 @@ class mysql {
 		std::mutex peer_queue_lock;
 		std::mutex snatch_queue_lock;
 		std::mutex token_queue_lock;
+        std::mutex user_torrent_queue_lock;
 
 		void do_flush_users();
 		void do_flush_torrents();
 		void do_flush_snatches();
 		void do_flush_peers();
 		void do_flush_tokens();
+        void do_flush_user_torrent();
 
 		void flush_users();
 		void flush_torrents();
 		void flush_snatches();
 		void flush_peers();
 		void flush_tokens();
+        void flush_user_torrent();
 		void clear_peer_data();
 
 	public:
@@ -64,6 +71,9 @@ class mysql {
 		void record_peer(std::string &record, std::string &ip, std::string &peer_id, std::string &useragent,std::string &ulogin); // (uid,fid,active,peerid,useragent,ip,uploaded,downloaded,upspeed,downspeed,left,timespent,announces,tstamp)
 		void record_peer(std::string &record, std::string &peer_id); // (fid,peerid,timespent,announces,tstamp)
 		void record_token(std::string &record);
+        void record_user_torrentst(std::string &record, std::string &ulogin);
+        void record_user_torrentist(std::string &record, std::string &ulogin);
+        void record_user_torrentud(std::string &record, std::string &ulogin);
 
 		void flush();
 

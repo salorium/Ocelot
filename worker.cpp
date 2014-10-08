@@ -395,13 +395,15 @@ std::string worker::announce(torrent &tor, user_ptr &u, params_type &params, par
 			}
 
 			if (uploaded_change || downloaded_change) {
-                /**
-                * Todo : utilisateur_torrent ajoute ce que l'on a dl et ou uploader :)
-                */
                 std::stringstream record;
 				record  << uploaded_change << ',' << downloaded_change << ','<<0 <<','<< u->karmatmp<< ')';
 				std::string record_str = record.str();
 				db->record_user(record_str,ulogin);
+                record_str.clear();
+                record.clear();
+                record<< tor.id<<','  << uploaded_change << ',' << downloaded_change;
+                record_str = record.str();
+                db->record_user_torrentud(record_str, ulogin);
 			}
 		}
 	}
@@ -500,7 +502,13 @@ std::string worker::announce(torrent &tor, user_ptr &u, params_type &params, par
 		std::string record_str = record.str();
 		db->record_peer(record_str, peer_id);
 	}
-    if ( p->last_seedtime_announced > 0 && p->last_seedtime_announced != cur_time){
+    if ( p->last_seedtime_announced > 0 ){
+        if ( p->last_seedtime_announced == cur_time){
+            std::stringstream record;
+            record  << tor.id ;
+            std::string record_str = record.str();
+            db->record_user_torrentist(record_str,ulogin);
+        }else{
         time_t seedtime = cur_time - p->last_seedtime_announced;
         /**
         * Todo ajouter le seedtime dans la table utilisateur_torrent
@@ -517,6 +525,12 @@ std::string worker::announce(torrent &tor, user_ptr &u, params_type &params, par
         record  << 0 << ',' << 0 << ','<<karma <<','<< u->karmatmp<< ')';
         std::string record_str = record.str();
         db->record_user(record_str,ulogin);
+        record.clear();
+        record_str.clear();
+            record  << tor.id << ',' << seedtime;
+            record_str = record.str();
+            db->record_user_torrentst(record_str, ulogin);
+        }
     }
     if ( left == 0){
         p->last_seedtime_announced = cur_time;
