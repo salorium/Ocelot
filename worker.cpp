@@ -400,7 +400,7 @@ std::string worker::announce(torrent &tor, user_ptr &u, params_type &params, par
 				std::string record_str = record.str();
 				db->record_user(record_str,ulogin);
                 record_str.clear();
-                record.clear();
+                record.str("");
                 record<< tor.id<<','  << uploaded_change << ',' << downloaded_change;
                 record_str = record.str();
                 db->record_user_torrentud(record_str, ulogin);
