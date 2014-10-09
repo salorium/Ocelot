@@ -217,7 +217,7 @@ void mysql::record_user_torrentist(std::string &record, std::string &ulogin){
             }
         std::cout<< "Query " << q.str()<<std::endl;
         user_torrent_queue.push(q.str());
-        update_user_torrentist_buffer += " dd";
+        update_user_torrentist_buffer += "0";
     }
 
     uq_lock.unlock();
