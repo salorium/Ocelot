@@ -206,16 +206,20 @@ void mysql::record_user_torrentist(std::string &record, std::string &ulogin){
     if (mysqlpp::StoreQueryResult res = query.store()) {
         size_t i = 0;
         int nb = res[i][0];
+        mysqlpp::Query q = conn.query();
+        //q.str("");
             if (nb == 0){
                 std::cout<< "Faire insert"<< std::endl;
+                q << "insert into utilisateur_torrent (login, idtorrent,time) VALUES ("<<mysqlpp::quote << ulogin<< ","<<record<<','<<time(NULL) <<')';
             }else{
                 std::cout<< "Faire update"<< std::endl;
+                q << "update utilisateur_torrent set time ="<< time(NULL) <<" where login =" << mysqlpp::quote << ulogin << " and idtorrent=" << record << " and time = 0";
             }
-
-
+        std::cout<< "Query" << q.str()<<std::endl;
+        user_torrent_queue.push(q.str());
     }
 
-
+    uq_lock.unlock();
    /* mysqlpp::Query q = conn.query();
     q << "update utilisateur_torrent set time ="<< time(NULL) <<" where login =" << mysqlpp::quote << ulogin << " and idtorrent=" << record << " and time = 0";
     user_torrent_queue.push(q.str());
