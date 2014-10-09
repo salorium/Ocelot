@@ -213,10 +213,11 @@ void mysql::record_user_torrentist(std::string &record, std::string &ulogin){
                 q << "insert into utilisateur_torrent (login, idtorrent,time) VALUES ("<<mysqlpp::quote << ulogin<< ","<<record<<','<<time(NULL) <<')';
             }else{
                 std::cout<< "Faire update"<< std::endl;
-                q << "update utilisateur_torrent set time ="<< time(NULL) <<" where login =" << mysqlpp::quote << ulogin << " and idtorrent=" << record << " and time = 0";
+                q << "update utilisateur_torrent set time ="<< time(NULL) <<" where login =" << mysqlpp::quote << ulogin << " and idtorrent=" << record << " and time=0";
             }
-        std::cout<< "Query" << q.str()<<std::endl;
+        std::cout<< "Query " << q.str()<<std::endl;
         user_torrent_queue.push(q.str());
+        update_user_torrentist_buffer += " dd";
     }
 
     uq_lock.unlock();
@@ -274,13 +275,9 @@ void mysql::flush_user_torrent() {
         update_user_torrentst_buffer.clear();
         sql.clear();
     }
-    /*if ( update_user_torrentist_buffer !=""){
-        sql = "update utilisateur_torrent (login, idtorrent,time) VALUES " + update_user_torrentist_buffer +
-                " ON DUPLICATE KEY UPDATE time =  VALUES(time)";
-        user_torrent_queue.push(sql);
+    if ( update_user_torrentist_buffer !=""){
         update_user_torrentist_buffer.clear();
-        sql.clear();
-    }*/
+    }
     if (ut_active == false) {
         std::thread thread(&mysql::do_flush_user_torrent, this);
         thread.detach();
