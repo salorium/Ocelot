@@ -203,7 +203,8 @@ void mysql::record_user_torrentist(std::string &record, std::string &ulogin){
     mysqlpp::Query query = conn.query("SELECT count(*) as nb FROM utilisateur_torrent where login =" + mysqlpp::quote + ulogin + " and idtorrent=" + record+ ");");
     if (mysqlpp::StoreQueryResult res = query.store()) {
         size_t i = 0;
-            if (res[i][0] == 0){
+        int nb = res[i][0];
+            if (nb == 0){
                 std::cout<< "Faire insert"<< std::endl;
             }else{
                 std::cout<< "Faire update"<< std::endl;
