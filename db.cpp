@@ -200,10 +200,23 @@ void mysql::record_user_torrentist(std::string &record, std::string &ulogin){
         update_user_torrentist_buffer += ",";
     }*/
     std::unique_lock<std::mutex> uq_lock(user_torrent_queue_lock);
-    mysqlpp::Query q = conn.query();
+    mysqlpp::Query query = conn.query("SELECT count(*) as nb FROM utilisateur_torrent where login =" + mysqlpp::quote + ulogin + " and idtorrent=" + record+ ");");
+    if (mysqlpp::StoreQueryResult res = query.store()) {
+        size_t i = 0;
+            if (res[i][0] == 0){
+                std::cout<< "Faire insert"<< std::endl;
+            }else{
+                std::cout<< "Faire update"<< std::endl;
+            }
+
+
+    }
+
+
+   /* mysqlpp::Query q = conn.query();
     q << "update utilisateur_torrent set time ="<< time(NULL) <<" where login =" << mysqlpp::quote << ulogin << " and idtorrent=" << record << " and time = 0";
     user_torrent_queue.push(q.str());
-    uq_lock.unlock();
+    uq_lock.unlock();*/
     //update_user_torrentist_buffer += q.str();
 }
 
