@@ -176,28 +176,28 @@ void connection_middleman::handle_read(ev::io &watcher, int events_flags) {
             address_v6 =((struct sockaddr_in6 *) ((struct sockaddr *)&client_addr));
 			inet_ntop(AF_INET6, &address_v6->sin6_addr, ip, INET6_ADDRSTRLEN);
 			std::string ip_str = ip;
-            std::cout << ip_str << std::endl;
+            //std::cout << ip_str << std::endl;
             bool ipv6= false;
 
             std::size_t found= ip_str.find('.');
             if (found!=std::string::npos){
-                std::cout<<"IPV4"<<std::endl;
+                //std::cout<<"IPV4"<<std::endl;
                 std::size_t f = ip_str.find_last_of(':');
-                std::cout<< f <<std::endl;
+                //std::cout<< f <<std::endl;
                 ip_str =ip_str.substr (++f);
             }else{
                 ipv6 = true;
                 unsigned int nbdetoken = 7;
-                std::cout<<"IPV6"<<std::endl;
+                //std::cout<<"IPV6"<<std::endl;
                 std::size_t n = std::count(ip_str.begin(), ip_str.end(), ':');
                 std::size_t nn = ip_str.find(":");
-                std::cout<< "Nb :"<< n << "\n";
+                //std::cout<< "Nb :"<< n << "\n";
                 if (n == 2 && nn == 0) {
-                    std::cout<< "=============\n";
+                    //std::cout<< "=============\n";
                     n = 1;
                 }
 
-                std::cout<< n<<(n==2 ? "Egale 2":"Pas egale") <<"\n";
+                //std::cout<< n<<(n==2 ? "Egale 2":"Pas egale") <<"\n";
                 if ( n < nbdetoken){
                     std::string complete = "";
                     for (int i=0, end= nbdetoken - n+1;i < end;i++){
@@ -208,13 +208,13 @@ void connection_middleman::handle_read(ev::io &watcher, int events_flags) {
                     ip_str.replace(t,2,complete);
                 }
                 if (ip_str.length() == 39){
-                    std::cout<<"Good\n";
+                    //std::cout<<"Good\n";
                 }else{
                     unsigned int debut = 4;
                     unsigned int debutsrc = 0;
                     for (int i=0;i < 7 ; i++){
                         if (ip_str.find(":",debutsrc) != debut){
-                            std::cout<< "insert 0"<<debutsrc<<"\n";
+                            //std::cout<< "insert 0"<<debutsrc<<"\n";
                             do{
                                 ip_str.insert(debutsrc,"0");
                             }while(ip_str.find(":",debutsrc)!= debut);
@@ -226,11 +226,11 @@ void connection_middleman::handle_read(ev::io &watcher, int events_flags) {
                         ip_str.insert(debutsrc,"0");
                     }while(ip_str.length()<39);
                 }
-                std::cout<<"il y a "<<(nbdetoken- n)<< " : \n";
+                //std::cout<<"il y a "<<(nbdetoken- n)<< " : \n";
             }
 
 
-            std::cout << ip_str << std::endl;
+            //std::cout << ip_str << std::endl;
 
 			//--- CALL WORKER
 			response = work->work(request, ip_str,ipv6);
