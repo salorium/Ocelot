@@ -49,7 +49,7 @@ std::string worker::work(std::string &input, std::string &ip, bool ipv6) {
 	if (input_length < 60) { // Way too short to be anything useful
 		return error("GET string too short");
 	}
-    std::cout<<ipv6 <<std::endl;
+    //std::cout<<ipv6 <<std::endl;
 	size_t pos = 5; // skip 'GET /'
 
 	// Get the passkey
@@ -435,7 +435,7 @@ std::string worker::announce(torrent &tor, user_ptr &u, params_type &params, par
 		p->ip = ip;
 		p->ip_port = "";
         char x = 0;
-        std::cout << "IP du client"<< p->ip<<std::endl;
+        //std::cout << "IP du client"<< p->ip<<std::endl;
 		for (size_t pos = 0, end = ip.length(); pos < end; pos++) {
 			if ( ipv6){
                 //Compact ipv6 adress
