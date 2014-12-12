@@ -14,7 +14,7 @@
 
 mysql::mysql(std::string mysql_db, std::string mysql_host, std::string username, std::string password) :
 	db(mysql_db), server(mysql_host), db_user(username), pw(password),
-	u_active(false), t_active(false), p_active(false), s_active(false), tok_active(false)
+	u_active(false), t_active(false), p_active(false), s_active(false), tok_active(false), ut_active(false)
 {
 	try {
 		conn.connect(mysql_db.c_str(), mysql_host.c_str(), username.c_str(), password.c_str(), 0);
@@ -193,7 +193,7 @@ void mysql::record_user_torrentst(std::string &record, std::string &ulogin){
     q << '(' << mysqlpp::quote << ulogin << ',' << record <<  ')';
 
     update_user_torrentst_buffer += q.str();
-    std::cout<< update_user_torrentst_buffer <<std::endl;
+    //std::cout<< update_user_torrentst_buffer <<std::endl;
 }
 void mysql::record_user_torrentist(std::string &record, std::string &ulogin){
     /*if (update_user_torrentist_buffer != "") {
@@ -209,13 +209,13 @@ void mysql::record_user_torrentist(std::string &record, std::string &ulogin){
         mysqlpp::Query q = conn.query();
         //q.str("");
             if (nb == 0){
-                std::cout<< "Faire insert"<< std::endl;
+            //    std::cout<< "Faire insert"<< std::endl;
                 q << "insert into utilisateur_torrent (login, idtorrent,time) VALUES ("<<mysqlpp::quote << ulogin<< ","<<record<<','<<time(NULL) <<')';
             }else{
-                std::cout<< "Faire update"<< std::endl;
+            //    std::cout<< "Faire update"<< std::endl;
                 q << "update utilisateur_torrent set time ="<< time(NULL) <<" where login =" << mysqlpp::quote << ulogin << " and idtorrent=" << record << " and time=0";
             }
-        std::cout<< "Query " << q.str()<<std::endl;
+        //std::cout<< "Query " << q.str()<<std::endl;
         user_torrent_queue.push(q.str());
         update_user_torrentist_buffer += "0";
     }
@@ -435,7 +435,8 @@ void mysql::do_flush_user_torrent() {
         while (user_torrent_queue.size() > 0) {
             try {
                 std::string sql = user_torrent_queue.front();
-                mysqlpp::Query query = c.query(sql);
+
+				mysqlpp::Query query = c.query(sql);
                 if (!query.exec()) {
                     std::cout << "User_torrent flush failed (" << user_torrent_queue.size() << " remain)" << std::endl;
                     sleep(3);
