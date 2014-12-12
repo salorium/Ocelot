@@ -103,7 +103,7 @@ void mysql::load_users(user_list &users) {
 */
 
 void mysql::load_tokens(torrent_list &torrents) {
-	mysqlpp::Query query = conn.query("SELECT uf.login, t.info_hash FROM users_freeleeches AS uf JOIN torrents AS t ON t.ID = uf.TorrentID WHERE uf.Expired = '0';");
+	mysqlpp::Query query = conn.query("SELECT uf.login, t.info_hash FROM users_freeleeches AS uf JOIN torrents AS t ON t.ID = uf.torrentid WHERE uf.expired = '0';");
 	if (mysqlpp::StoreQueryResult res = query.store()) {
 		size_t num_rows = res.num_rows();
 		for (size_t i = 0; i < num_rows; i++) {
@@ -418,8 +418,8 @@ void mysql::flush_tokens() {
 	if (update_token_buffer == "") {
 		return;
 	}
-	sql = "INSERT INTO users_freeleeches (UserID, TorrentID, Downloaded) VALUES " + update_token_buffer +
-		" ON DUPLICATE KEY UPDATE Downloaded = Downloaded + VALUES(Downloaded)";
+	sql = "INSERT INTO users_freeleeches (login, torrentid, downloaded) VALUES " + update_token_buffer +
+		" ON DUPLICATE KEY UPDATE downloaded = downloaded + VALUES(downloaded)";
 	token_queue.push(sql);
 	update_token_buffer.clear();
 	if (tok_active == false) {
