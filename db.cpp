@@ -433,9 +433,9 @@ void mysql::do_flush_user_torrent() {
     try {
         mysqlpp::Connection c(db.c_str(), server.c_str(), db_user.c_str(), pw.c_str(), 0);
         while (user_torrent_queue.size() > 0) {
-            try {
-                std::string sql = user_torrent_queue.front();
 
+                std::string sql = user_torrent_queue.front();
+			try {
 				mysqlpp::Query query = c.query(sql);
                 if (!query.exec()) {
                     std::cout << "User_torrent flush failed (" << user_torrent_queue.size() << " remain)" << std::endl;
@@ -447,10 +447,12 @@ void mysql::do_flush_user_torrent() {
                 }
             }
             catch (const mysqlpp::BadQuery &er) {
+				std::cout<<sql<<std::endl;
                 std::cerr << "Query error: " << er.what() << " in flush users_torrent with a qlength: " << user_torrent_queue.front().size() << " queue size: " << user_torrent_queue.size() << std::endl;
                 sleep(3);
                 continue;
             } catch (const mysqlpp::Exception &er) {
+				std::cout<<sql<<std::endl;
                 std::cerr << "Query error: " << er.what() << " in flush users_torrent with a qlength: " << user_torrent_queue.front().size() <<  " queue size: " << user_torrent_queue.size() << std::endl;
                 sleep(3);
                 continue;
