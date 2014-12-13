@@ -563,9 +563,9 @@ std::string worker::announce(torrent &tor, user_ptr &u, params_type &params, par
 		} else {
 			record_ip = ip;
 		}
-		record << '(' << ulogin << ',' << tor.id << ',' << cur_time;
+		record <<  tor.id << ',' << cur_time;
 		std::string record_str = record.str();
-		db->record_snatch(record_str, record_ip);
+		db->record_snatch(record_str, record_ip,ulogin);
 
 		// User is a seeder now!
 		if (!inserted) {

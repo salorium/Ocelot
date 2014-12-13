@@ -228,12 +228,12 @@ void mysql::record_user_torrentist(std::string &record, std::string &ulogin){
     //update_user_torrentist_buffer += q.str();
 }
 
-void mysql::record_snatch(std::string &record, std::string &ip) {
+void mysql::record_snatch(std::string &record, std::string &ip,std::string &ulogin) {
 	if (update_snatch_buffer != "") {
 		update_snatch_buffer += ",";
 	}
 	mysqlpp::Query q = conn.query();
-	q << record << ',' << mysqlpp::quote << ip << ')';
+	q << '(' <<mysqlpp::quote << ulogin<< ','<< record << ',' << mysqlpp::quote << ip << ')';
 	update_snatch_buffer += q.str();
 }
 
