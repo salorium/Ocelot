@@ -97,6 +97,15 @@ int main(int argc, char **argv) {
 	stats.request_rate = 0;
 	stats.leechers = 0;
 	stats.seeders = 0;
+	stats.leechersipv4 = 0;
+	stats.leechersipv6 = 0;
+	stats.seedersipv4 = 0;
+	stats.seedersipv6 = 0;
+	stats.nbtorrents = torrents_list.size();
+	stats.nbtorrentsleecheripv4 = 0;
+	stats.nbtorrentsleecheripv6 = 0;
+	stats.nbtorrentsseederipv4 = 0;
+	stats.nbtorrentsseederipv6 = 0;
 	stats.announcements = 0;
 	stats.succ_announcements = 0;
 	stats.scrapes = 0;

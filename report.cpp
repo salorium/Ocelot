@@ -24,6 +24,9 @@ std::string report(params_type &params, user_list &users_list, client_opts_t &cl
 		std::string up_mt = up_m <= 9 ? '0' + inttostr(up_m) : inttostr(up_m);
 		std::string up_st = up_s <= 9 ? '0' + inttostr(up_s) : inttostr(up_s);
 
+		double nbt = static_cast<double>(stats.nbtorrents);
+		double nbts6 = static_cast<double>(stats.nbtorrentsseederipv6);
+		double nbts4 = static_cast<double>(stats.nbtorrentsseederipv4);
 		output << "Uptime: " << up_d << " days, " << up_ht << ':' << up_mt << ':' << up_st << '\n'
 		<< stats.opened_connections << " connections opened\n"
 		<< stats.open_connections << " open connections\n"
@@ -34,7 +37,16 @@ std::string report(params_type &params, user_list &users_list, client_opts_t &cl
 		<< (stats.announcements - stats.succ_announcements) << " failed announcements\n"
 		<< stats.scrapes << " scrapes\n"
 		<< stats.leechers << " leechers tracked\n"
+		<< stats.leechersipv4 << " leechers ipv4 tracked\n"
+		<< stats.leechersipv6 << " leechers ipv6 tracked\n"
 		<< stats.seeders << " seeders tracked\n"
+		<< stats.seedersipv4 << " seeders ipv4 tracked\n"
+		<< stats.seedersipv6 << " seeders ipv6 tracked\n"
+		<< stats.nbtorrents << " torrents\n"
+		<< stats.nbtorrentsseederipv4 << " torrent with seeders ipv4\n"
+		<< stats.nbtorrentsseederipv6 << " torrent with seeders ipv6\n"
+		<< (nbts6 / nbt *100.00 )<< " % torrent with seeders ipv6\n"
+		<< (nbts4 / nbt *100.00 )<< " % torrent with seeders ipv4\n"
 		<< stats.bytes_read << " bytes read\n"
 		<< stats.bytes_written << " bytes written\n";
 	} else if (action == "user") {

@@ -1,0 +1,55 @@
+xbt_files_users
+    uid
+    fid
+    active
+    uploaded
+    downloaded
+    upspeed
+    downspeed
+    remaining
+    corrupt
+    timespent
+    announced
+    ip
+    peer_id
+    useragent
+    mtime
+
+
+torrents
+ Seeders
+ Leechers
+ ID
+ info_hash
+ freetorrent
+ Snatched
+ Balance
+ last_action
+
+users_main
+ Enabled
+ IP
+ Visible
+ torrent_pass
+ can_leech
+ ID
+ Uploaded
+ Downloaded
+
+users_freeleeches
+  TorrentID
+  Expired
+  UserID
+  Downloaded
+
+xbt_client_whitelist
+  peer_id
+
+xbt_snatched
+  uid
+  fid
+  tstamp
+  IP
+
+GET /aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa/report?get=stats&dddddddddddd
+     00000000000000000000000000000000

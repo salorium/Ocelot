@@ -26,6 +26,7 @@ typedef struct {
 	uint16_t port;
 	bool visible;
 	bool invalid_ip;
+	bool isIpv6;
 	user_ptr user;
 	std::string ip_port;
 	std::string ip;
@@ -43,6 +44,10 @@ typedef struct {
 	time_t last_flushed;
 	peer_list seeders;
 	peer_list leechers;
+	uint32_t  seeders_ipv4;
+	uint32_t  seeders_ipv6;
+	uint32_t  leechers_ipv4;
+	uint32_t  leechers_ipv6;
 	std::string last_selected_seeder;
 	std::set<userid_t> tokened_users;
 } torrent;
@@ -82,6 +87,7 @@ typedef struct {
 	bool gzip;
 	bool html;
 	bool http_close;
+	bool isIpv6;
 } client_opts_t;
 
 typedef std::unordered_map<std::string, torrent> torrent_list;
@@ -94,6 +100,15 @@ struct stats_t {
 	std::atomic<uint64_t> connection_rate;
 	std::atomic<uint32_t> leechers;
 	std::atomic<uint32_t> seeders;
+	std::atomic<uint32_t> seedersipv4;
+	std::atomic<uint32_t> seedersipv6;
+	std::atomic<uint32_t> leechersipv6;
+	std::atomic<uint32_t> leechersipv4;
+	std::atomic<uint32_t> nbtorrents;
+	std::atomic<uint32_t> nbtorrentsseederipv4;
+	std::atomic<uint32_t> nbtorrentsseederipv6;
+	std::atomic<uint32_t> nbtorrentsleecheripv4;
+	std::atomic<uint32_t> nbtorrentsleecheripv6;
 	std::atomic<uint64_t> requests;
 	std::atomic<uint64_t> request_rate;
 	std::atomic<uint64_t> announcements;

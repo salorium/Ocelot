@@ -30,7 +30,7 @@ const std::string response(const std::string &body, client_opts_t &client_opts) 
 
 const std::string response_head(size_t content_length, client_opts_t &client_opts) {
 	const std::string content_type = client_opts.html ? "text/html" : "text/plain";
-	std::string head = "HTTP/1.1 200 OK\r\nServer: Ocelot 1.0";
+	std::string head = "HTTP/1.1 200 OK\r\nServer: Ocelot 1.0 ipv6";
 	head += "\r\nContent-Type: " + content_type;
 	if (client_opts.gzip) {
 		head += "\r\nContent-Encoding: gzip";

@@ -57,9 +57,9 @@ void connection_mother::reload_config(config * conf) {
 }
 
 int connection_mother::create_listen_socket() {
-	sockaddr_in address;
+	sockaddr_in6 address;
 	memset(&address, 0, sizeof(address));
-	int new_listen_socket = socket(AF_INET, SOCK_STREAM, 0);
+	int new_listen_socket = socket(AF_INET6, SOCK_STREAM, 0);
 
 	// Stop old sockets from hogging the port
 	int yes = 1;
@@ -67,12 +67,18 @@ int connection_mother::create_listen_socket() {
 		std::cout << "Could not reuse socket: " << strerror(errno) << std::endl;
 		return 0;
 	}
-
+	int i =0;
+	int status = setsockopt(new_listen_socket, IPPROTO_IPV6, IPV6_V6ONLY,&i, sizeof i);
+	if (status < 0) {
+		fprintf(stderr, "Cannot set options on the socket: %s\n",
+		strerror(errno));
+		abort();
+	}
 	// Get ready to bind
-	address.sin_family = AF_INET;
+	address.sin6_family = AF_INET6;
 	//address.sin_addr.s_addr = inet_addr(conf->host.c_str()); // htonl(INADDR_ANY)
-	address.sin_addr.s_addr = htonl(INADDR_ANY);
-	address.sin_port = htons(listen_port);
+	address.sin6_addr = in6addr_any;
+	address.sin6_port = htons(listen_port);
 
 	// Bind
 	if (bind(new_listen_socket, (sockaddr *) &address, sizeof(address)) == -1) {
@@ -188,13 +194,67 @@ void connection_middleman::handle_read(ev::io &watcher, int events_flags) {
 			shutdown(connect_sock, SHUT_RD);
 			response = error("GET string too long", client_opts);
 		} else {
-			char ip[INET_ADDRSTRLEN];
-			sockaddr_in client_addr;
+			char ip[INET6_ADDRSTRLEN];
+			sockaddr_storage client_addr;
 			socklen_t addr_len = sizeof(client_addr);
 			getpeername(connect_sock, (sockaddr *) &client_addr, &addr_len);
-			inet_ntop(AF_INET, &(client_addr.sin_addr), ip, INET_ADDRSTRLEN);
+			struct sockaddr_in6 *address_v6;
+			address_v6 = ((struct sockaddr_in6 *) ((struct sockaddr *)&client_addr));
+			inet_ntop(AF_INET6, &address_v6->sin6_addr, ip, INET6_ADDRSTRLEN);
 			std::string ip_str = ip;
+			std::cout << ip_str << std::endl;
+			client_opts.isIpv6= false;
 
+			std::size_t found= ip_str.find('.');
+			if (found!=std::string::npos){
+				std::cout<<"IPV4"<<std::endl;
+				std::size_t f = ip_str.find_last_of(':');
+				std::cout<< f <<std::endl;
+				ip_str =ip_str.substr (++f);
+			}else{
+				client_opts.isIpv6 = true;
+				unsigned int nbdetoken = 7;
+				std::cout<<"IPV6"<<std::endl;
+				std::size_t n = std::count(ip_str.begin(), ip_str.end(), ':');
+				std::size_t nn = ip_str.find(":");
+				std::cout<< "Nb :"<< n << "\n";
+				if (n == 2 && nn == 0) {
+					std::cout<< "=============\n";
+					n = 1;
+				}
+
+				std::cout<< n<<(n==2 ? "Egale 2":"Pas egale") <<"\n";
+				if ( n < nbdetoken){
+					std::string complete = "";
+					for (int i=0, end= nbdetoken - n+1;i < end;i++){
+						complete = complete+ "0000:";
+					}
+					size_t t = ip_str.find("::");
+					if ( t!= 0)complete = ":"+complete;
+					ip_str.replace(t,2,complete);
+				}
+				if (ip_str.length() == 39){
+					std::cout<<"Good\n";
+				}else{
+					unsigned int debut = 4;
+					unsigned int debutsrc = 0;
+					for (int i=0;i < 7 ; i++){
+						if (ip_str.find(":",debutsrc) != debut){
+							std::cout<< "insert 0"<<debutsrc<<"\n";
+							do{
+								ip_str.insert(debutsrc,"0");
+							}while(ip_str.find(":",debutsrc)!= debut);
+						}
+						debutsrc +=5;
+						debut += 5;
+					}
+					do{
+						ip_str.insert(debutsrc,"0");
+					}while(ip_str.length()<39);
+				}
+				std::cout<<"il y a "<<(nbdetoken- n)<< " : \n";
+			}
+			std::cout << ip_str << std::endl;
 			//--- CALL WORKER
 			response = work->work(request, ip_str, client_opts);
 			request.clear();

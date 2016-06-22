@@ -103,6 +103,10 @@ void mysql::load_torrents(torrent_list &torrents) {
 				tor.balance = 0;
 				tor.completed = res[i][3];
 				tor.last_selected_seeder = "";
+				tor.leechers_ipv4 = 0;
+				tor.leechers_ipv6 = 0;
+				tor.seeders_ipv4 = 0;
+				tor.seeders_ipv6 = 0;
 			} else {
 				tor.tokened_users.clear();
 				cur_keys.erase(info_hash);
