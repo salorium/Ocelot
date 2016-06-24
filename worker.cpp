@@ -814,12 +814,18 @@ std::string worker::announce(const std::string &input, torrent &tor, user_ptr &u
 	if ( p->isIpv6){
 		//Je suis un ipv6
 
-		if (numwant > 0) {
-			//Je demande du boulot
 			if (left > 0) {
-				//Je suis un leecher donc j'ai le choix en ipv4 ou ipv6 je prend celui qui est le plus gros si seeder ipv6 > seeder ipv4 comme ca je laisse les ipv4 pour les ipv4 :)
-				if (found_speers6 >= found_speers){
-					//plus de seeder ipv6 qu' ipv4 donc je prend de l'ipv6
+				//Leecher
+				if ( found_speers6 == 0){
+					output += "e5:peers";
+					if (peers.length() == 0) {
+						output += "0:";
+					} else {
+						output += inttostr(peers.length());
+						output += ":";
+						output += peers;
+					}
+				}else if (found_speers6 >= found_speers){
 					output += "e6:peers6";
 					if (peers6.length() == 0) {
 						output += "0:";
@@ -828,7 +834,7 @@ std::string worker::announce(const std::string &input, torrent &tor, user_ptr &u
 						output += ":";
 						output += peers6;
 					}
-				}else{
+				} else{
 					output += "e5:peers";
 					if (peers.length() == 0) {
 						output += "0:";
@@ -873,16 +879,6 @@ std::string worker::announce(const std::string &input, torrent &tor, user_ptr &u
 				}
 
 			}
-		}else{
-			output += "e6:peers6";
-			if (peers6.length() == 0) {
-				output += "0:";
-			} else {
-				output += inttostr(peers6.length());
-				output += ":";
-				output += peers6;
-			}
-		}
 
 	}else{
 		//Je suis un ipv4 alors je recupère que des ipv4 xD
